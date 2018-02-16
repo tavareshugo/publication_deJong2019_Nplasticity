@@ -1,17 +1,19 @@
 ---
-title: Arabidopsis shows extensive natural variation in shoot branching response to
-  nitrate supply
-output: html_document
+title: "de Jong et al (2018)"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Summary
+# Analysis of trait variation
 
-The code in this document reproduces figures 1-4 and S1 of the paper. It requires 
-the packages `tidyverse` and `patchwork`.
+The code in this document reproduces figures 1-4, S1-S2 of the paper. Most figures 
+were post-processed in Inkscape. 
 
 ```{r, message = FALSE}
 library(tidyverse)
@@ -30,51 +32,43 @@ theme_set(theme_classic() +
 ```
 
 
-# Read data
+## Read data
 
 There are two main datasets: accessions and MAGIC lines.
 
 For each there are three data files in the `./data/phenotypes` directory. The 
 files have the following sufixes:
 
-* `_individual` contains phenotype data for each individual plant
-* `_summarised` contains phenotype data summarised for each line (for example 
-mean trait value per line)
-* `_plasticity` is similar to the one above, but in a different format and with 
-plasticities (difference between HN and LN) calculated.
+Here, we read the trait data summarised by line, in two different formats 
+(basically, because these formats are useful for visualisation in different contexts):
 
 ```{r, message = FALSE}
 # Read MAGIC line data
-magic_ind <- read_rds("../../data/phenotypes/magic_individual.rds")
 magic_sum <- read_rds("../../data/phenotypes/magic_summarised.rds")
 magic_plas <- read_rds("../../data/phenotypes/magic_plasticity.rds")
 
 # Read Accession data (note there is also senescence data for this set)
-acc_ind <- read_rds("../../data/phenotypes/accessions_individual.rds") %>% 
-  filter(set == "silique")
 acc_sum <- read_rds("../../data/phenotypes/accessions_summarised.rds") %>% 
   filter(set == "silique")
 acc_plas <- read_rds("../../data/phenotypes/accessions_plasticity.rds") %>% 
   filter(set == "silique")
 
-acc_ind_sen <- read_rds("../../data/phenotypes/accessions_individual.rds") %>% 
-  filter(set == "senescence")
 acc_sum_sen <- read_rds("../../data/phenotypes/accessions_summarised.rds") %>% 
   filter(set == "senescence")
 acc_plas_sen <- read_rds("../../data/phenotypes/accessions_plasticity.rds") %>% 
   filter(set == "senescence")
 
-# Read variance components created elsewhere
+# Read variance components created in 01_variance_partitioning.Rmd
 all_trait_vars <- read_csv("./temp_data/all_trait_variances.csv")
 ```
 
 
-# Trait correlations between nitrate treatments
+## Natural variation in shoot branching response to nitrate supply
 
-# Figure 1
+### Figure 1
 
 This picture shows variance components estimated using linear mixed models (see
-separate document "02_variance_partitioning.Rmd")
+separate document "01_variance_partitioning.Rmd")
 
 ```{r}
 #pdf("./figures/figure1.pdf", width = 4.5, height = 2.5)
@@ -84,18 +78,18 @@ all_trait_vars %>%
   group_by(set, trait) %>% 
   mutate(variance = variance/sum(variance)*100,
          component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_gen"))) %>% 
+  ungroup() %>% 
   ggplot(aes(trait, variance, fill = component, label = round(variance))) +
   geom_bar(stat = "identity", colour = "black") +
   facet_grid(~ set, scales = "free_x", space = "free_x") +
   scale_fill_manual(labels = c("Res", "GxE", "E", "G"),
                     values = c("white", "gray48", "grey", "black")) +
-  geom_text(size = 3, position = position_stack(vjust = 0.5)) +
   labs(y = "% variance", x = "Trait") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 #dev.off()
 ```
 
-# Figure 2
+### Figure 2
 
 This figure shows the correlations between key traits on HN and LN. We also indicate 
 Pearson's correlation coeficient in the plots.
@@ -151,12 +145,7 @@ p4 <- ggplot(acc_plas, aes(bolt_mean_hn, bolt_mean_ln)) +
   labs(x = "Days to Flowering (HN)", y = "Days to Flowering (LN)") +
   scale_x_continuous(breaks = seq(10, 40, 5)) +
   scale_y_continuous(breaks = seq(10, 40, 5))
-```
 
-
-The following code puts these plots together:
-
-```{r}
 # Put the plots together and save to pdf
 #pdf("./figures/figure2.pdf", width = 5.2, height = 5.2)
 p1 + labs(title = "A") + 
@@ -168,7 +157,7 @@ p1 + labs(title = "A") +
 ```
 
 
-# Figure S1
+### Figure S1
 
 This figure shows the correlation between number of shoot branches at the 2-silique 
 and sencescence stages:
@@ -192,7 +181,7 @@ cor_sil_sen <- data.frame(nitrate = c("HN", "LN"),
                                            use = "complete.obs")))
 
 # Figure
-pdf("./figures/figureS1.pdf", width = 5.2, height = 5)
+#pdf("./figures/figureS1.pdf", width = 5.2, height = 5)
 temp %>% 
   ggplot(aes(totalbr_sil, totalbr_sen)) +
   geom_point() +
@@ -200,11 +189,11 @@ temp %>%
   geom_abline(linetype = "dashed") +
   facet_wrap(~ nitrate) +
   labs(x = "Total Branches (silique)", y = "Total Branches (senescence)")
-dev.off()
+#dev.off()
 ```
 
-This figure shows the difference between number of shoot branches at the 2-silique 
-and senescence stages:
+This plot (not included in the paper) shows the difference between number of 
+shoot branches at the 2-silique and senescence stages:
 
 ```{r}
 temp %>% 
@@ -231,11 +220,12 @@ inner_join(acc_sum, acc_sum_sen, by = c("id_leyser", "nitrate", "totalbr_n")) %>
   geom_abline()
 ```
 
-# Figure S2
+### Figure S2
 
 This section explores the correlation between silique number and seed yield:
 
 ```{r}
+# Read seed yield data
 seeds <- read_csv("../../data/seed_yield/seed_yield.csv")
 
 # Summarise data with means
@@ -269,6 +259,7 @@ We report the data summarised per line and separately for HN and LN (showing 2x
 standard error):
 
 ```{r}
+# Relationship between siliques number and seed weight
 p1 <- ggplot(seeds_sum, aes(totalsil_mean, seedwgt_mean, colour = nitrate)) +
   geom_point(aes(shape = set)) +
   geom_errorbar(aes(ymin = seedwgt_mean - 2*seedwgt_se, ymax = seedwgt_mean + 2*seedwgt_se)) +
@@ -281,6 +272,7 @@ p1 <- ggplot(seeds_sum, aes(totalsil_mean, seedwgt_mean, colour = nitrate)) +
   theme(legend.position = c(1, 0.1), legend.justification = c(1, 0.1)) +
   scale_shape_manual(values = c(19, 4))
 
+# Relationship between branch number and seed weight
 p2 <- ggplot(seeds_sum, aes(totalbr_mean, seedwgt_mean, colour = nitrate)) +
   geom_point(aes(shape = set)) +
   geom_errorbar(aes(ymin = seedwgt_mean - 2*seedwgt_se, ymax = seedwgt_mean + 2*seedwgt_se), width = 0) +
@@ -292,13 +284,8 @@ p2 <- ggplot(seeds_sum, aes(totalbr_mean, seedwgt_mean, colour = nitrate)) +
   labs(x = "Total Branches", y = "Seed weight (mg)") +
   theme(legend.position = "none") +
   scale_shape_manual(values = c(19, 4))
-```
 
-
-This shows the correlation between shoot branches and silique number at the 
-senescence stage:
-
-```{r}
+# Relationship between branch number and silique number at senescence stage
 p3 <- ggplot(acc_sum_sen, aes(totalbr_mean, totalsil_mean, colour = nitrate)) +
   geom_point() +
   annotate(geom = "text", x = 0, y = 200, size = 2.5, hjust = 0, 
@@ -306,11 +293,8 @@ p3 <- ggplot(acc_sum_sen, aes(totalbr_mean, totalsil_mean, colour = nitrate)) +
   labs(x = "Total Branches", y = "Total Siliques") +
   scale_colour_manual(values = c("black", "grey")) +
   theme(legend.position = c(1, 1), legend.justification = c(1,1))
-```
 
-Putting all plots together:
-
-```{r}
+# Putting plots together
 #pdf("./figures/figureS2.pdf", width = 5.2, height = 5.2)
 p2 + ggtitle("A") +
   p1 + ggtitle("B") +
@@ -320,7 +304,7 @@ p2 + ggtitle("A") +
 ```
 
 
-# deprecated figure - removed from final version of the paper
+### deprecated figure - removed from final version of the paper
 
 This figure schematically illustrates different patterns of correlation between 
 a trait in two environments and how it relates to plasticity.
@@ -364,22 +348,21 @@ p1 + p2 + plot_layout(ncol = 2)
 ```
 
 
-# Plasticity is associated with extreme phenotypes and correlates with flowering time
+## Plasticity is associated with extreme phenotypes and correlates with flowering time
 
-## Figure 3
+### Figure 3
 
 This figure shows the correlation between shoot branching plasticity and the 
 respective values on each nitrate treatment. This illustrates the correlation 
-observed in the "random slopes" model produced for Figure 2.
+observed in the "random slopes" model produced for Figure 1 
+(see code in "01_variance_partitioning.Rmd").
 
 It also shows the correlation between plasticity and flowering time.
 
-Here, I produce each plot at a time.
-
 **Panel A:**
 
-```{r figure3A}
-# Plot of total branches against plasticity. 
+```{r}
+# total branches against plasticity. 
 p1 <- ggplot(magic_plas, aes(x = totalbr_mean_D)) +
   geom_point(aes(y = totalbr_mean_hn, colour = "HN"), size = 0.8) +
   geom_point(aes(y = totalbr_mean_ln, colour = "LN"), size = 0.8) +
@@ -392,11 +375,9 @@ p1 <- ggplot(magic_plas, aes(x = totalbr_mean_D)) +
   theme(legend.position = c(0.1, 1), legend.justification = c(0.1, 1))
 ```
 
-
-
 **Panel B:**
 
-```{r figure3B}
+```{r}
 # Make subset of extremes using earlier flowering plants 
 ## (25 on each end of the distribution)
 magic_extremes <- magic_plas %>% 
@@ -420,7 +401,7 @@ p2 <- ggplot(magic_extremes, aes(nitrate, totalbr_mean, fill = nitrate)) +
 
 **Panel C:**
 
-```{r figure3C}
+```{r}
 # Correlation with flowering time
 # Also add the correlation for different sets of the data
 # And highlight the two lines that are used for later experiments
@@ -437,10 +418,9 @@ p3 <- ggplot(magic_plas, aes(bolt_mean_ln, totalbr_mean_D)) +
   scale_x_continuous(breaks = seq(10, 100, 10))
 ```
 
+Put plots together:
 
-And now all the plots can be put together:
-
-```{r figure3}
+```{r}
 #pdf("./figures/figure3.pdf", width = 5.2, height = 4)
 {p1 + ggtitle("A") +
     p2 + ggtitle("B")} /
@@ -462,7 +442,7 @@ magic_extremes %>%
             q2 = quantile(bolt_mean, 0.75))
 ```
 
-How many lines in total or under 25 days of flowering:
+Number of lines in total or under 25 days of flowering:
 
 ```{r}
 sum(!is.na(magic_plas$bolt_mean_ln))
@@ -471,7 +451,7 @@ sum(magic_plas$bolt_mean_ln < 25)
 
 
 
-## Figure 4
+### Figure 4
 
 This is similar to Figure 3, but with an added panel showing the correlation 
 between plasticity and fruit number. 
@@ -480,7 +460,7 @@ between plasticity and fruit number.
 
 ```{r figure4A}
 # Plot of total branches against plasticity. 
-# I add Pearson's correlation to the plot
+# Add Pearson's correlation to the plot
 p1 <- ggplot(acc_plas, aes(x = totalbr_mean_D)) +
   geom_point(aes(y = totalbr_mean_hn, colour = "HN"), size = 0.8) +
   geom_point(aes(y = totalbr_mean_ln, colour = "LN"), size = 0.8) +
@@ -555,12 +535,12 @@ p4 <- ggplot(acc_plas, aes(bolt_mean_ln, totalbr_mean_D)) +
 Putting the whole figure together
 
 ```{r figure4}
-pdf("./figures/figure4.pdf", width = 5.2, height = 4)
+#pdf("./figures/figure4.pdf", width = 5.2, height = 4)
 {p1 + ggtitle("A") +
     p2 + ggtitle("B")} /
     {p3 + ggtitle("C") +
       p4 + ggtitle("D")}
-dev.off()
+#dev.off()
 ```
 
 The mean flowering time for each of the groups in Panel B is given below:
@@ -582,19 +562,15 @@ sum(!is.na(acc_plas$bolt_mean_ln))
 sum(acc_plas$bolt_mean_ln < 25)
 ```
 
+### Extra
 
-
-
-
-
-Relationship between plasticity and average fruit yield:
+This was not included in the paper, but it shows the relationship between 
+plasticity and average fruit yield - this shows that plasticity 
+itself is not adaptive:
 
 ```{r}
 acc_plas_sen %>% 
   mutate(mean_sil = (totalsil_mean_hn + totalsil_mean_ln)/2) %>% 
-  # mutate(totalbr_mean_D = as.vector(scale(totalbr_mean_D)),
-  #        mean_sil = as.vector(scale((totalsil_mean_hn + totalsil_mean_ln)/2))) %>% 
-  # #filter(set == "senescence") %>% head
   ggplot(aes(totalbr_mean_D, mean_sil)) +
   geom_point() +
   geom_hline(aes(yintercept = mean(mean_sil))) +
@@ -603,20 +579,10 @@ acc_plas_sen %>%
 ```
 
 
+
+# Session info
+
 ```{r}
-temp <- acc_sum_sen %>% 
-  group_by(id_gwapp, name) %>% 
-  summarise(totalbr_mean_D = totalbr_mean[nitrate == "HN"] - totalbr_mean[nitrate == "LN"],
-            totalsil_mean_all = (totalsil_mean[nitrate == "HN"] * totalsil_n[nitrate == "HN"] + totalsil_mean[nitrate == "LN"] * totalsil_n[nitrate == "LN"])/(totalsil_n[nitrate == "HN"] + totalsil_n[nitrate == "LN"]))
-
-fit <- lm(totalsil_mean_all ~ totalbr_mean_D, data = temp)
-
-ggplot(temp, aes(totalbr_mean_D, totalsil_mean_all)) +
-  geom_point() +
-  geom_abline(intercept = fit$coefficients[1], slope = fit$coefficients[2], colour = "steelblue", size = 1) +
-  geom_hline(aes(yintercept = mean(totalsil_mean_all)), colour = "grey48", linetype = "dashed") +
-  geom_vline(aes(xintercept = mean(totalbr_mean_D)), colour = "grey48", linetype = "dashed")
+sessionInfo()
 ```
-
-
 
