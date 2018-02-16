@@ -1,0 +1,326 @@
+---
+title: "de Jong et al (2018)"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Estimating broad-sense heritabilities
+
+This document contains the code to estimate heritabilities using linear mixed 
+models. The implementation is similar to the one presented in a separate 
+document titled "01_variance_partitioning.Rmd", where we partitioned phenotypic 
+variance into genetic and non-genetic components.
+
+In this case, heritabilities are estimated for each N treatment separately, so 
+the models used here are simpler, generally in the form:
+
+$Y = G + \epsilon$
+
+Where 'G' is the random genotype contribution (line ID), and $\epsilon$ is the residual 
+error. We assume these components have a gaussian distribution, such that 
+$G \sim N(0, \sigma_G)$ and $R \sim N(0, \sigma_R)$.
+
+As we will see below, the linear model assumptions are not always well respected, 
+but we hope to mitigate this somewhat by providing confidence intervals for our 
+estimates.
+
+We estimate two types of heritability (see [Nakagawa & Schielzeth 2010](http://onlinelibrary.wiley.com/doi/10.1111/j.1469-185X.2010.00141.x/full) 
+and [Kover .. Mott 2009](http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1000551)):
+
+1. Broad-sense heritability (H2), which we take as being well estimated from the
+"clonal repeatability"" of individual measurements on our inbred lines. 
+2. An upper limit to narrow-sense heritability (h2_upper), or the repeatability 
+of measurement means.
+
+In this case, h2_upper will always be higher than H2, which is counter-intuitive 
+since broad-sense heritability includes both additive and non-additive components 
+of phenotypic variance, whereas narrow-sense heritability refers to the additive 
+component phenotypic variance only. However, heritability would be based on the 
+average phenotype of an individual, which thus reduces error variance (the 
+denominator of heritability partitioning h = Vp / (Vp + Ve)).
+
+Below, we first present the result for a few of the traits, to demonstrate some 
+of the caveats with model assumptions. We then have code that estimates the 
+heritability for all traits, which are combined into a single table, for plotting.
+
+```{r, message = FALSE}
+library(tidyverse)
+library(patchwork)
+library(lme4)
+
+# Change ggplot2 default aesthetics
+theme_set(theme_classic() + 
+            theme(panel.grid = element_blank(), 
+                  text = element_text(size = 8),
+                  plot.title = element_text(hjust = -0.07, size = 10, face = "bold", 
+                                            margin = margin(t = -5, b = 1)),
+                  plot.subtitle = element_text(size = 10, hjust = 0.5)))
+
+# Source some custom functions
+source("./functions/repeatHeritability.R")
+source("./functions/plotLmmDiag.R")
+```
+
+
+## Read data
+
+There are two main datasets: accessions and MAGIC lines.
+
+Here we read individual data, which can be used to estimate repeatabilities.
+
+```{r, message = FALSE}
+# Read MAGIC line data
+magic_ind <- read_rds("../../data/phenotypes/magic_individual.rds") %>% 
+  mutate(id_leyser = as.character(id_leyser))
+
+# Read Accession data (note there is also senescence data for this set)
+acc_ind <- read_rds("../../data/phenotypes/accessions_individual.rds") %>% 
+  filter(set == "silique")
+
+acc_ind_sen <- read_rds("../../data/phenotypes/accessions_individual.rds") %>% 
+  filter(set == "senescence")
+```
+
+We also create a vector containing the lines that flower, on average, before 25 
+days on LN:
+
+```{r, message=FALSE}
+early_magic <- read_rds("../../data/phenotypes/magic_plasticity.rds") %>% 
+  filter(bolt_mean_ln < 25) %>% .$id_leyser
+
+early_acc <- read_rds("../../data/phenotypes/accessions_plasticity.rds") %>% 
+  filter(set == "silique" & bolt_mean_ln < 25) %>% .$id_leyser
+```
+
+
+## Model details
+
+Before calculating estimates of heritability presented in the paper, we want to 
+explicitly demonstrate the model that is being fitted and its diagnostics. 
+
+In particular, we discuss flowering time (days to bolt) because the model diagnostics 
+are improved by transforming the data.
+
+### Height
+
+We start with height, which is the trait that best approximates a normal 
+distribution:
+
+```{r}
+# The following pipe filters data to include only one of the nitrate treatments
+# Then fits the model that will be used to extract variance components
+# and finally produces some diagnostic plots for the model
+magic_ind %>% 
+  filter(nitrate == "LN") %>% 
+  lmer(height ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+
+magic_ind %>% 
+  filter(nitrate == "HN") %>% 
+  lmer(height ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+```
+
+These diagnostics show that the residuals are well approximated by a normal 
+distribution (with some deviations at the tails) and that there is no 
+extreme heteroskedasticity in the data (the trend line on the scale-location plot
+is relatively flat).
+
+### Days to bolt
+
+For flowering time, the diagnostics reveal some issues:
+
+```{r}
+magic_ind %>% 
+  filter(nitrate == "LN") %>% 
+  lmer(bolt ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+
+magic_ind %>% 
+  filter(nitrate == "HN") %>% 
+  lmer(bolt ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+```
+
+Not only do the residuals deviate from normality at the tails of the distribution, 
+but there's also a clear sign that the variance increases with the fitted values 
+(blue trend line on scale-location plots).
+
+This is ammeliorated by log-transforming the data:
+
+```{r}
+magic_ind %>% 
+  filter(nitrate == "LN") %>% 
+  lmer(log2(bolt) ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+
+magic_ind %>% 
+  filter(nitrate == "HN") %>% 
+  lmer(log2(bolt) ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+```
+
+Although the residuals still have some departure from normality, the 
+scale-location plot seems to have a flatter trend line, suggesting that the 
+variance has been somewhat stabilized across the range of fitted values. 
+We therefore estimate heritability based on log-transformed days to bolt. 
+
+```{r}
+# log-transform flowering time
+magic_ind <- mutate(magic_ind, bolt = log2(bolt))
+```
+
+
+
+### Shoot branching
+
+Despite being count data, for shoot branches the diagnostics look reasonable:
+
+```{r}
+magic_ind %>% 
+  filter(nitrate == "LN") %>% 
+  lmer(totalbr ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+
+magic_ind %>% 
+  filter(nitrate == "HN") %>% 
+  lmer(totalbr ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+```
+
+Square-root transformation of the data does not seem to improve this (in fact, 
+it seems to make it worse):
+
+```{r}
+magic_ind %>% 
+  filter(nitrate == "LN") %>% 
+  lmer(sqrt(totalbr) ~ (1|id_leyser), data = .) %>% 
+  plotLmmDiag()
+```
+
+We therefore use the model on non-transformed data.
+
+
+## Heritability estimates for all traits
+
+We have written a function that estimates genetic and residual variance from the 
+models fitted as exemplified above. The function can produce diagnostic plots for 
+the linear model, to assess its suitability. In this section we do not produce 
+these plots for all traits, as we already highlighted the main issues above. 
+
+The function also provides with a 95% confidence interval for the heritability 
+estimates, using a parametric bootstrap approach (see 
+[Kluen & Brommer 2013](https://doi.org/10.1093/beheco/ars221)).
+
+First we make a list of all the phenotypes and respective genotypes for different 
+sets of data:
+
+```{r}
+# Make list of phenotypes and respective genotypes to estimate heritabilities
+## naming convention is "population_trait_stage_flowering", where:
+## population: either MAGIC lines or Accessions
+## trait: bolt, height, total branches, total siliques
+## stage: 2-silique or senescence
+## flowering: all lines or only early flowering lines (<25 days)
+traits <- list(
+  magic_bolt_sil_all = magic_ind %>% select(nitrate, id_leyser, bolt),
+  magic_bolt_sil_early = magic_ind %>% filter(id_leyser %in% early_magic) %>% select(nitrate, id_leyser, bolt),
+  magic_height_sil_all = magic_ind %>% select(nitrate, id_leyser, height),
+  magic_height_sil_early = magic_ind %>% filter(id_leyser %in% early_magic) %>% select(nitrate, id_leyser, height),
+  magic_totalbr_sil_all = magic_ind %>% select(nitrate, id_leyser, totalbr),
+  magic_totalbr_sil_early = magic_ind %>% filter(id_leyser %in% early_magic) %>% select(nitrate, id_leyser, totalbr),
+  acc_bolt_sil_all = acc_ind %>% select(nitrate, id_leyser, bolt),
+  acc_bolt_sil_early = acc_ind %>% filter(id_leyser %in% early_acc) %>% select(nitrate, id_leyser, bolt),
+  acc_height_sil_all = acc_ind %>% select(nitrate, id_leyser, height),
+  acc_height_sil_early = acc_ind %>% filter(id_leyser %in% early_acc) %>% select(nitrate, id_leyser, height),
+  acc_totalbr_sil_all = acc_ind %>% select(nitrate, id_leyser, totalbr),
+  acc_totalbr_sil_early = acc_ind %>% filter(id_leyser %in% early_acc) %>% select(nitrate, id_leyser, totalbr),
+  acc_totalbr_sen_all = acc_ind_sen %>% select(nitrate, id_leyser, totalbr),
+  acc_totalbr_sen_early = acc_ind_sen %>% filter(id_leyser %in% early_acc) %>% select(nitrate, id_leyser, totalbr),
+  acc_totalsil_sen_all = acc_ind_sen %>% select(nitrate, id_leyser, totalsil),
+  acc_totalsil_sen_early = acc_ind_sen %>% filter(id_leyser %in% early_acc) %>% select(nitrate, id_leyser, totalsil)
+)
+```
+
+We now loop through this list and estimate heritabilities using our custom 
+function. We do this separately for HN and LN:
+
+```{r}
+# Because the code below takes long to run, we only run it if the output file 
+# does not already exist
+
+# Create output directory
+if(!dir.exists("./temp_data/")) dir.create("./temp_data")
+
+# Fit model
+if(!file.exists("./temp_data/all_trait_heritabilities.csv")){
+  
+  # Loop through list to calculate heritabilities
+  hers <- lapply(traits, function(x){
+    names(x) <- c("nitrate", "genotype", "phenotype")
+    x %>% 
+      group_by(nitrate) %>% 
+      do(repeatHeritability(.$phenotype, .$genotype, plot_diag = FALSE, 
+                            ci = 0.95, nboot = 1000, ncores = 2))
+  })
+  
+  # Combine and tidy all tables
+  hers <- bind_rows(hers, .id = "set") %>% 
+    separate(set, c("pop", "trait", "stage", "flowering"), sep = "_")
+  
+  # Save this table to avoid re-computing
+  write_csv(hers, "./temp_data/all_trait_heritabilities.csv")
+  
+} else {
+  # If the file exists, read it
+  hers <- read_csv("./temp_data/all_trait_heritabilities.csv")
+}
+```
+
+Sample sizes in each combination:
+
+```{r}
+temp <- map(traits, function(x){
+  names(x) <- c("nitrate", "genotype", "phenotype")
+  x %>% 
+    filter(!is.na(phenotype) & !is.na(genotype)) %>% 
+    count(nitrate, genotype) %>% 
+    summarise(min = min(n), max = max(n), med = median(n), n = length(unique(genotype)))
+})
+
+bind_rows(temp, .id = "trait")
+```
+
+### Fig S4  
+
+This is the plot presented in the paper:
+
+```{r}
+#pdf("./figures/figureS4.pdf", width = 4.5, height = 2.5)
+hers %>%
+  mutate(pop = factor(pop, levels = c("magic", "acc")),
+         trait = ifelse(stage == "sen", paste0(trait, " (sen)"), trait)) %>% 
+  ggplot(aes(trait, her_i, fill = nitrate)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = her_i_lo, ymax = her_i_hi), width = 0, position = position_dodge(0.9)) +
+  facet_grid(flowering ~ pop, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = c("grey48", "grey")) +
+  labs(x = "Trait", y = "Broad-sense Heritability") +
+  theme_bw(base_size = 8) +
+  theme(panel.grid = element_blank())
+#dev.off()
+```
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
+
