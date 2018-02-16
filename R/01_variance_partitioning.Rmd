@@ -1,11 +1,16 @@
 ---
-title: "Variance partitioning"
-output: html_document
+title: "de Jong et al (2018)"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# Partitioning of trait variances
 
 This document summarises and discusses the procedures used to fit linear mixed 
 models to our phenotypic data.
@@ -13,18 +18,33 @@ models to our phenotypic data.
 These models were used to estimate the proportion of genetic variance that is 
 attributed to plasticity (GxE) as well as to produce estimates of heritability. 
 
-This document was produced using the statistical package _R_, and can be used to 
-reproduce our analysis based on the code show.
+We use linear mixed models to explore the following questions:
+
+* is there significant plasticity for a trait in relation to nitrate?
+* is there significant _variation_ in that plasticity between lines (GxE)?
+
+Our definition of "plasticity" is simply the difference between the mean trait 
+values on `HN - LN`. 
+
+We present the analysis for each dataset and trait separately. The first section, 
+on height, is more detailed, whereas the other sections are less detailed as they 
+essentially repeat the same procedure.
+
 
 ```{r, message = FALSE}
 # Load packages
 library(tidyverse)
 library(lme4)
 library(broom)
-library(gridExtra)
+library(patchwork)
 
-# Set ggplot2 defaults
-theme_set(theme_classic())
+# Change ggplot2 default aesthetics
+theme_set(theme_classic() + 
+            theme(panel.grid = element_blank(), 
+                  text = element_text(size = 8),
+                  plot.title = element_text(hjust = -0.07, size = 10, face = "bold", 
+                                            margin = margin(t = -5, b = 1)),
+                  plot.subtitle = element_text(size = 10, hjust = 0.5)))
 
 # Source some custom functions
 source("./functions/plotLmmDiag.R")
@@ -32,66 +52,39 @@ source("./functions/extractVarsLmm.R")
 ```
 
 
-# Read data
+## Read data
 
 There are two main datasets: accessions and MAGIC lines.
 
-For each there are three data files in the `./data/phenotypes` directory. The 
-files have the following sufixes:
-
-* `_individual` contains phenotype data for each individual plant.
-* `_summarised` contains phenotype data summarised for each line (for example 
-mean trait value per line).
-* `_plasticity` is similar to the one above, but in a different format and with 
-plasticities (difference between HN and LN) calculated.
+Here, we load both the individual-based data and the data summarised by line 
+(with plasticities calculated):
 
 ```{r, message = FALSE}
 # Read MAGIC line data
 magic_ind <- read_rds("../../data/phenotypes/magic_individual.rds")
-magic_sum <- read_rds("../../data/phenotypes/magic_summarised.rds")
 magic_plas <- read_rds("../../data/phenotypes/magic_plasticity.rds")
 
 # Read Accession data (note there is also senescence data for this set)
 acc_ind <- read_rds("../../data/phenotypes/accessions_individual.rds") %>% 
-  filter(set == "silique")
-acc_sum <- read_rds("../../data/phenotypes/accessions_summarised.rds") %>% 
   filter(set == "silique")
 acc_plas <- read_rds("../../data/phenotypes/accessions_plasticity.rds") %>% 
   filter(set == "silique")
 
 acc_ind_sen <- read_rds("../../data/phenotypes/accessions_individual.rds") %>% 
   filter(set == "senescence")
-acc_sum_sen <- read_rds("../../data/phenotypes/accessions_summarised.rds") %>% 
-  filter(set == "senescence")
 acc_plas_sen <- read_rds("../../data/phenotypes/accessions_plasticity.rds") %>% 
   filter(set == "senescence")
-```
 
-
-# Summary
-
-We use linear mixed models to explore the following questions:
-
-* is there significant plasticity for a trait in relation to nitrate?
-* is there significant _variation_ in that plasticity between lines?
-
-Our definition of "plasticity" is simply the difference between the mean trait 
-values on `HN - LN`. Therefore, for modeling purposes, I set the variable 
-`nitrate` as a factor, with LN as the reference value:
-
-```{r}
+# For modeling purposes, set the variable nitrate as a factor, with LN as the reference value
 magic_ind$nitrate <- factor(magic_ind$nitrate, levels = c("LN", "HN"))
 acc_ind$nitrate <- factor(acc_ind$nitrate, levels = c("LN", "HN"))
 acc_ind_sen$nitrate <- factor(acc_ind_sen$nitrate, levels = c("LN", "HN"))
 ```
 
-We present the analysis for each dataset and trait separately. The first section, 
-on height, is quite detailed as it sets the stage for the analysis carried out 
-throughout the rest of the document. The other sections are less detailed.
 
-# MAGIC lines
+## MAGIC lines
 
-## Height
+### Height
 
 We start by looking at height, which in this population of plants has a simple 
 genetic basis (due to the _Ler erecta_ mutation). This trait is also reasonably 
@@ -107,7 +100,7 @@ magic_ind %>%
 
 Because we measure the same genetically identical line (genotype) several times 
 in each treatment, we consider that these lines might have different mean values 
-for the trait being considered (this might strictly speaking not be true - 
+for the trait being considered (this might not be true - 
 individuals could vary regardless of their genotype, i.e. the heritability 
 would be zero). Here, we start with this basic assumption as our null model.
 
@@ -144,9 +137,7 @@ magic_ind %>%
 abline(0, 1, col = "red3")
 ```
 
-The discrepancy is likely due to the slight heteroskedasticity in our residuals.
-
-An now we can examine a summary of this model:
+We can examine a summary of this model:
 
 ```{r}
 summary(m0_magic_height)
@@ -177,8 +168,6 @@ magic_ind %>%
   summarise(mean_height = mean(height, na.rm = TRUE))
 ```
 
-We can see that this is roughly true.
-
 We can also estimate the overall amount of variance explained by the model, 
 computing the R2 following the method suggested by 
 [Nakagawa & Schielzeth 2010](http://onlinelibrary.wiley.com/doi/10.1111/j.1469-185X.2010.00141.x/full)) 
@@ -200,9 +189,9 @@ model" explains a significant amount of variance compared to the previous
 anova(m0_magic_height, m1_magic_height) %>% tidy
 ```
 
-The result suggests that we should reject the null hypothesis that the two models 
-explain a similar amount of variance in height, leading us to conclude that there 
-is significant plasticity for height in response to nitrate.
+The result suggests that the null hypothesis (that the two models 
+explain a similar amount of variance in height) is unlikely, leading us to conclude 
+that there is significant plasticity for height in response to nitrate.
 
 The previous model assumes that every genotype responds equally to the nitrate 
 (i.e. that every MAGIC line is, on average, 2.4cm taller on HN). But this is not 
@@ -221,7 +210,7 @@ to the difference between LN and HN (~6.6, which is 6.6/(10.5+6.6) ~
 lines vary more than others between the two treatments. 
 
 A test comparing this "GxE" model and the "plasticity model" shows that this 
-interaction is significant:
+interaction is likely significant:
 
 ```{r}
 anova(m1_magic_height, m2_magic_height) %>% tidy
@@ -245,7 +234,7 @@ p2 <- magic_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
+p1 + p2 + plot_layout(ncol = 2)
 ```
 
 Again, we can get an estimate of the variance explained by the fixed effect 
@@ -270,7 +259,8 @@ It should be noted that it is possible that the means in each environment are
 correlated with the difference between environments (plasticity) and so variance 
 partitioning in this context should be interpreted with care. 
 
-The variance estimates from the model are:
+We extract variance estimates from the model using a custom function, which uses 
+the methods presented in [Brommer (2013)](https://link.springer.com/article/10.1007/s00265-013-1603-9):
 
 ```{r}
 extractVarsLmm(m2_magic_height)
@@ -290,13 +280,13 @@ extractVarsLmm(m2_magic_height) %>%
 ```
 
 It's worth pointing that, despite ~16% of genetic variance being atributed 
-to plasticity in this model, the trait is well correlated between environments, 
+to plasticity in this model, the trait is correlated between environments, 
 with an estimated correlation of 
-`r cor(magic_plas$height_mean_hn, magic_plas$height_mean_ln)` from the 
+`r round(cor(magic_plas$height_mean_hn, magic_plas$height_mean_ln), 2)` from the 
 data.
 
 
-# Flowering time
+### Flowering time
 
 The distribution for this trait is highly right-skewed:
 
@@ -307,7 +297,7 @@ magic_ind %>%
   facet_grid(~ nitrate)
 ```
 
-This gives some problems using the model assuming gaussian errors:
+This gives some problems using the "genetic model" assuming gaussian errors:
 
 ```{r}
 m0_magic_bolt <- lmer(bolt ~ (1|id_leyser), data = magic_ind)
@@ -325,14 +315,17 @@ anthocyanin in the leaves), which probably affects the quality of the data.
 We therefore log-transform the data, to reduce the skew:
 
 ```{r}
+# log-transform data
 magic_ind$boltLog <- log2(magic_ind$bolt)
+
+# plot
 ggplot(magic_ind, aes(boltLog)) +
   geom_histogram(binwidth = 0.2) +
   facet_grid(~ nitrate)
 ```
 
-In the model, this substantially attenuates the heteroskedasticity, although the 
-residuals still depart from normality at the tails:
+In the model, this substantially attenuates the heteroskedasticity and departure 
+from normality (although still skewed at the tails):
 
 ```{r}
 m0_magic_bolt <- lmer(boltLog ~ (1|id_leyser), data = magic_ind)
@@ -343,10 +336,11 @@ The "scale-location plot" shows a less dramatic increase in variance along the
 fitted values, so we will proceed building upon this model. 
 
 We could use a generalised linear mixed model (GLMM), although extracting variance 
-components is more challenging in that case. We will show how that approach gives 
-qualitatively similar results at the end of this section.
+components is more challenging in that case. However, we show below how that approach 
+gives qualitatively similar results.
 
 ```{r}
+# Fit "plasticity model"
 m1_magic_bolt <- lmer(boltLog ~ nitrate + (1|id_leyser), data = magic_ind)
 summary(m1_magic_bolt)
 ```
@@ -367,7 +361,7 @@ magic_ind %>%
   summarise(mean_bolt = mean(bolt, na.rm = TRUE))
 ```
 
-The estimate is actually not matching that of the data. This is because these 
+The estimate deviates a bit from the original data. This is because these 
 marginal means are likely influenced by the very late-flowering individuals on 
 LN, which skew the mean upwards. (this can be seen in the reaction norm plots, 
 below). Ignoring those late-flowering lines, there is actually very little 
@@ -377,6 +371,7 @@ Finally, we can carry our test, to see if the new model explains a significant
 portion of variance:
 
 ```{r}
+# Contrast the genetic and plasticity models
 anova(m0_magic_bolt, m1_magic_bolt) %>% tidy()
 ```
 
@@ -392,6 +387,7 @@ summary(m2_magic_bolt)
 ```
 
 ```{r}
+# Contrast plasticity and GxE models
 anova(m1_magic_bolt, m2_magic_bolt) %>% tidy()
 ```
 
@@ -420,7 +416,7 @@ p2 <- magic_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
+p1 + p2
 ```
 
 There is one important observation to make: there is a negative correlation between the 
@@ -451,10 +447,11 @@ extractVarsLmm(m2_magic_bolt) %>%
   geom_text(size = 3, position = position_stack(vjust = 0.5))
 ```
 
-Confirming very little variation due nitrate and so virtually no plasticity.
+Confirming very little variation due nitrate and so, biologically, there is 
+basically no plasticity.
 
 
-### GLMM
+#### GLMM approach
 
 As a comparison, this shows how the result from a GLMM assuming Poisson-distributed 
 errors, is qualitatively similar.
@@ -462,7 +459,6 @@ errors, is qualitatively similar.
 In this case we also add an "overdispersion" component, to allow estimation 
 of individual-level (residual) variance (following section IV in 
 [Nakagawa & Schielzeth 2010](http://onlinelibrary.wiley.com/doi/10.1111/j.1469-185X.2010.00141.x/full)):
-
 
 ```{r}
 magic_ind$id_unique <- 1:nrow(magic_ind)
@@ -481,10 +477,13 @@ extractVarsLmm(m2_magic_bolt_glmm) %>%
   geom_text(size = 3, position = position_stack(vjust = 0.5))
 ```
 
+We can see that the result is qualitatively similar to the one obtained using the 
+log-transformed data above.
 
-## Total Branches
+### Total Branches
 
 ```{r}
+# Plot distribution
 magic_ind %>% 
   ggplot(aes(totalbr)) +
   geom_histogram(binwidth = 1) + 
@@ -499,9 +498,9 @@ m0_magic_totalbr <- lmer(totalbr ~ (1|id_leyser), data = magic_ind)
 plotLmmDiag(m0_magic_totalbr)
 ```
 
-This is actually surprising. The residuals fit reasonably well with a gaussian 
-distribution (except towards the tails) and their variance does not seem to 
-increase with the fitted values.
+This is actually surprising: the residuals fit reasonably well with a gaussian 
+distribution (except towards the tails, as usual) and their variance does not 
+seem to increase with the fitted values.
 
 So we will keep using the LMM using gaussian errors, although we try a GLMM model 
 below as well to show it produces qualitatively similar results.
@@ -559,7 +558,7 @@ p2 <- magic_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
+p1 + p2
 ```
 
 The plots are qualitatively similar between the model and the data. We can see 
@@ -587,7 +586,7 @@ extractVarsLmm(m2_magic_totalbr) %>%
 ```
 
 
-### GLMM
+#### GLMM approach
 
 As noted before, although the diagnostics suggest a LMM with Gaussian assumptions 
 might not be absurd for these data, we confirm the above findings with a general 
@@ -650,12 +649,12 @@ The "criss-cross" pattern aluded to above has a significant biological consequen
 which is discussed further in the paper.
 
 
-# Accessions
+## Accessions
 
-The same procedure as above is used for the accessions. I will explain individual 
-steps more sparingly.
+The same procedure as above is used for the accessions. Therefore, the individual 
+steps are explained more sparingly.
 
-## Height
+### Height
 
 ```{r}
 # Genetic model
@@ -696,8 +695,7 @@ p2 <- acc_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
-rm(p1, p2)
+p1 + p2
 ```
 
 Variance components:
@@ -715,7 +713,7 @@ extractVarsLmm(m2_acc_height) %>%
 
 
 
-## Bolt
+### Bolt
 
 These data do not have as extreme outliers as in the MAGIC lines:
 
@@ -755,10 +753,6 @@ m1_acc_bolt <- lmer(boltLog ~ nitrate + (1|id_leyser), data = acc_ind)
 anova(m0_acc_bolt, m1_acc_bolt) %>% tidy()
 ```
 
-These are not significantly different using p < 0.01! 
-Suggests there is no significant plasticity for the trait. Given this, it's 
-hardly worth continuing, but we do so to extract variance components.
-
 The "GxE" model:
 
 ```{r}
@@ -786,8 +780,7 @@ p2 <- acc_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
-rm(p1, p2)
+p1 + p2
 ```
 
 ```{r}
@@ -843,8 +836,7 @@ p2 <- acc_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
-rm(p1, p2)
+p1 + p2
 ```
 
 ```{r}
@@ -861,7 +853,7 @@ extractVarsLmm(m2_acc_totalbr) %>%
 Again, this is the trait with highest GxE.
 
 
-## Total Branches - senescence
+### Total Branches - senescence
 
 ```{r}
 # Genetic model
@@ -902,8 +894,7 @@ p2 <- acc_ind_sen %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
-rm(p1, p2)
+p1 + p2
 ```
 
 ```{r}
@@ -921,16 +912,17 @@ The variance due to Nitrate increased relatively to 2-silique stage. There is
 still ~13% GxE variance.
 
 
-## Total Siliques - senescence
+### Total Siliques - senescence
 
 ```{r}
+# Square-root transform
 acc_ind_sen <- acc_ind_sen %>% 
   mutate(totalsil = as.numeric(totalsil),
          totalsilSqrt = sqrt(totalsil))
 ```
 
 ```{r}
-ggplot(acc_ind_sen, aes(sqrt(totalsil))) + 
+ggplot(acc_ind_sen, aes(totalsilSqrt)) + 
   geom_histogram() +
   facet_grid(~ nitrate)
 ```
@@ -984,8 +976,7 @@ p2 <- acc_ind_sen %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-grid.arrange(p1, p2, ncol = 2)
-rm(p1, p2)
+p1 + p2
 ```
 
 ```{r}
@@ -1000,10 +991,10 @@ extractVarsLmm(m2_accsen_totalsil) %>%
 ```
 
 This is quite similar to that obtained for total branches, which is consistent 
-with the two traits being correlated (shown in Figure X of paper).
+with the two traits being correlated (shown in Figure S2 of the paper).
 
 
-# Partition variances
+## Variance partitioning
 
 Based on the above models, we partition the variance of all the models, 
 to get an idea of the proportion of variance due to genetic and non-genetic 
@@ -1057,6 +1048,7 @@ acc_trait_vars <- list(bolt = extractVarsLmm(m2_acc_bolt),
 all_trait_vars <- bind_rows(magic_trait_vars, acc_trait_vars)
 
 # Save this table
+if(!dir.exists("./temp_data")) dir.create("./temp_data")
 if(!file.exists("./temp_data/all_trait_variances.csv")){
   all_trait_vars %>% 
     select(trait, component, variance, set) %>% 
@@ -1064,7 +1056,7 @@ if(!file.exists("./temp_data/all_trait_variances.csv")){
 }
 ```
 
-This will be done to produce the variance-component barplots:
+The table above is used to produce the variance-component barplots:
 
 ```{r}
 all_trait_vars %>% 
