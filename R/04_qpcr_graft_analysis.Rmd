@@ -1,0 +1,496 @@
+---
+title: Shoot branching plasticity depends on shoot genotype
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The code in this document has the analysis of the RT-qPCR data for Nitrate-
+responsive genes and analysis of grafting experiments.
+
+```{r, message = FALSE}
+library(tidyverse)
+library(patchwork)
+
+# Change ggplot2 default aesthetics
+theme_set(theme_classic() + 
+            theme(panel.grid = element_blank(), 
+                  text = element_text(size = 8),
+                  plot.title = element_text(hjust = -0.07, size = 10, face = "bold", 
+                                            margin = margin(t = -5, b = 1)),
+                  plot.subtitle = element_text(size = 10, hjust = 0.5)))
+```
+
+# RT-qPCR analysis
+
+We present the qPCR results as as the fold-change between treatment and 
+control nitrate conditions. We use the $\Delta\Delta Cp$ method of 
+[Livak & Schmittgen 2001](http://ac.els-cdn.com/S1046202301912629/1-s2.0-S1046202301912629-main.pdf?_tid=f6bbac12-2995-11e7-a6b3-00000aacb362&acdnat=1493111152_62fdd597373da762183aef1acc581a7e).
+
+The approach is similar to what is illustrated in Fig. 2 of that paper. In summary, 
+we do the following steps:
+
+* For each gene calculate the mean Cp across the technical replicates
+* For each sample calculate mean Cp for the two reference genes
+* Normalise the expression of each gene by $\Delta Cp = Cp_{target} - Cp_{reference}$
+* Calculate gene relative expression as $2^{-\Delta Cp}$
+
+The fold change is then calculated in relation to the average $\Delta Cp$ of 
+control samples:
+
+* Separate table into treatment and control conditions
+* In the control table, calculate mean Cp for each gene
+* Merge this new table with the treatment table
+* Calculate second delta-Cp as 
+$\Delta\Delta Cp = \Delta Cp_{treatment} - \Delta Cp_{control}$
+* Calculate fold change as $2^{-\Delta\Delta Cp}$
+
+First we read the data:
+
+```{r}
+# Read data
+# Add a unique ID
+qpcr <- read_csv("../../data/qpcr/nitrate_response_qpcr.csv") %>% 
+  select(-line) %>%
+  rename(line = line_name) %>% 
+  mutate(line = factor(line, levels = c("Col-0", "MAGIC.11", "Hi-0", "Sha", "MAGIC.345", "Rsch-4", "Tsu-0")))
+#gene = factor(gene) %>% relevel("GSR1")
+```
+
+Then calculate the average across three technical replicates for each sample.
+
+(Note: see this post for discussion between arithmetic and geometric means: https://www.researchgate.net/post/How_to_analyze_a_qPCR_with_2_or_3_housekeeping_genes)
+
+```{r}
+# Calculate average of technical replicates
+qpcr_means <- qpcr %>% 
+  group_by(sample_nr, gene, rep, line, line_type, nitrate) %>% 
+  summarise(Cp_mean = mean(Cp, na.rm = TRUE)) %>% 
+  ungroup()
+```
+
+Now we calculate the average for the two reference genes:
+
+```{r}
+# Calculate the mean expression of the two reference genes
+qpcr_means <- qpcr_means %>% 
+  mutate(gene = ifelse(gene %in% c("APX3", "ubc9"), "reference", gene)) %>% 
+  group_by_at(vars(-Cp_mean)) %>% 
+  summarise(Cp_mean = mean(Cp_mean))
+```
+
+Now we calculate the first delta-Cp: $\Delta Cp = Cp_{target} - Cp_{reference}$
+
+```{r}
+# Add Cp of reference genes as a new column and calculate dCp
+dcp <- qpcr_means %>% 
+  group_by(sample_nr) %>% 
+  mutate(Cp_ref = Cp_mean[gene == "reference"],
+         dCp = Cp_mean - Cp_ref) %>%
+  ungroup() %>% 
+  filter(gene != "reference") %>% 
+  rename(Cp_target = Cp_mean)
+```
+
+Now we calculate average Cp of each gene in the control condition:
+
+```{r}
+# Calculate the mean Cp in control samples per gene and genotype
+dcp <- dcp %>% 
+  group_by(line, gene) %>% 
+  mutate(Cp_target_control = mean(Cp_target[nitrate == "control"]),
+         Cp_ref_control = mean(Cp_ref[nitrate == "control"])) %>% 
+  ungroup()
+```
+
+And finally we calculate the delta-delta-Cp:
+
+```{r}
+# Calculate ddCp, the fold-change
+# also relevel gene to ensure GSR1 appears first in the plots (as it's the only downregulated gene)
+dcp <- dcp %>% 
+  mutate(ddCp = dCp - (Cp_target_control - Cp_ref_control),
+         fold_change = 2^-ddCp,
+         gene = factor(gene) %>% relevel("GSR1"))
+```
+
+Finally, the plot in the paper:
+
+```{r}
+# Plot log2(fold)
+p1 <- dcp %>% 
+  filter(nitrate == "treat") %>% 
+  ggplot(aes(line, log2(fold_change), colour = line_type)) +
+  geom_point(size = 0.8) +
+  #geom_point(stat = "summary", fun.y = "mean", shape = "_", size = 4, colour = "black") +
+  facet_grid( ~ gene, scales = "free_x") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_colour_manual(values = c("black", "grey", "gray48")) +
+  labs(x = "Line", y = expression(log[2]("KNO"[3]/"KCl")),
+       colour = "Ideotype") +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = c(0, 1), legend.justification = c(-0.1, 1.1),
+        legend.background = element_rect(color = "black", size = 0.5))
+
+#pdf("./figures/figure6.pdf", width = 7, height = 2.5)
+p1
+#dev.off()
+```
+
+It's also worth to look at the relative expression of different samples, not 
+just fold-change in relation to control:
+
+```{r}
+dcp %>% 
+  ggplot(aes(line, (-dCp), colour = line_type)) +
+  geom_point(size = 0.8) +
+  facet_grid(nitrate ~ gene, scales = "free") +
+  scale_colour_manual(values = c("black", "grey", "gray48")) +
+  labs(x = "Line", y = "Relative expression",
+       colour = "Ideotype") +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = "right",
+        legend.background = element_rect(color = "black", size = 0.5))
+```
+
+
+
+# Grafting analysis
+
+These experiments were first performed in 2013 and then repeated in 2015. The data 
+are analysed together (accounting for the potential variation between experiments).
+
+```{r}
+graft <- read_csv("../../data/grafting/grafting_experiments.csv") %>% 
+  mutate(experiment = as.character(experiment))
+
+# Tidy data
+## Remove plants that were too small
+## Add a unique ID for each individual
+## Make nitrate into a factor
+## Order ID by the shoot type (convenient for consistent plotting)
+graft <- graft %>% 
+  filter(small != "small" | is.na(small)) %>% 
+  mutate(id = paste(shoot_id, root_id, graft_type, sep = "\n"),
+         nitrate = factor(nitrate, levels = c("HN", "LN")),
+         type = ifelse(grepl("M11|M345", id), "MAGIC", "accession")) %>% 
+  mutate(id = reorder(as.factor(id), as.numeric(as.factor(paste0(shoot_type, graft_type)))))
+```
+
+This is the sample size distribution for each graft combination:
+
+```{r}
+# how many samples in each group
+graft %>% 
+  count(experiment, id, nitrate) %>% 
+  ggplot(aes(n)) + geom_bar()
+```
+
+Because the sample sizes are different, we will test the effect of shoot and root 
+ideotypes using linear mixed models (detailed below).
+
+Here are the distributions of the two traits for each condition:
+
+```{r}
+graft %>% 
+  mutate(id = gsub("_", "\n", id)) %>% 
+  ggplot(aes(id, totalbr, fill = nitrate)) +
+  geom_boxplot() +
+  facet_grid(experiment ~ type, scales = "free_x") +
+  scale_fill_manual(values = c("gray48", "grey")) +
+  theme(panel.grid = element_blank())
+
+graft %>% 
+  mutate(id = gsub("_", "\n", id)) %>% 
+  ggplot(aes(id, days_to_bolt, fill = nitrate)) +
+  geom_boxplot() +
+  facet_grid(experiment ~ type, scales = "free_x") +
+  scale_fill_manual(values = c("gray48", "grey")) +
+  theme(panel.grid = element_blank())
+```
+
+And here is the figures presented in the paper, which summarise things as 
+means +/- CI:
+
+```{r}
+p1 <- graft %>% 
+  group_by(id, nitrate, experiment, type) %>% 
+  summarise(mean = mean(totalbr, na.rm = TRUE),
+            sd = sd(totalbr, na.rm = TRUE),
+            n = sum(!is.na(totalbr)),
+            se = 1.96*sd/sqrt(n)) %>% 
+  mutate(id2 = paste(id, experiment)) %>% 
+  ggplot(aes(interaction(nitrate, id), mean, ymin = mean - se, ymax = mean + se, colour = nitrate)) +
+  geom_line(aes(group = id2, linetype = experiment), colour = "black") + 
+  geom_point() +
+  geom_errorbar(width = 0) +
+  facet_grid( ~ type, scales = "free_x") +
+  scale_colour_manual(values = c("black", "grey")) +
+  theme(panel.grid = element_blank(), axis.text.x = element_text(size = 3)) +
+  labs(x = "", y = "Total Branches", colour = "Nitrate")
+
+p2 <- graft %>% 
+  group_by(id, nitrate, experiment, type) %>% 
+  summarise(mean = mean(days_to_bolt, na.rm = TRUE),
+            sd = sd(days_to_bolt, na.rm = TRUE),
+            n = sum(!is.na(days_to_bolt)),
+            se = 1.96*sd/sqrt(n)) %>% 
+  mutate(id2 = paste(id, experiment)) %>% 
+  ggplot(aes(interaction(nitrate, id), mean, ymin = mean - se, ymax = mean + se, colour = nitrate)) +
+  geom_line(aes(group = id2, linetype = experiment), colour = "black") + 
+  geom_point() +
+  geom_errorbar(width = 0) +
+  facet_grid( ~ type, scales = "free_x") +
+  scale_colour_manual(values = c("black", "grey")) +
+  theme(panel.grid = element_blank(), axis.text.x = element_text(size = 3)) +
+  labs(x = "", y = "Days to Flowering", colour = "Nitrate") +
+  ylim(0, 24)
+
+#pdf("./figures/figure7.pdf", width = 7.5, height = 3.5)
+p2 + p1 + plot_layout(ncol = 1)
+#dev.off()
+```
+
+
+## Effect of root and shoot ideotypes on branching
+
+```{r}
+# load library to fit mixed models
+library(lme4)
+library(broom)
+source("./functions/plotLmmDiag.R") # function to plot some diagnostics from lme4 object
+```
+
+We use linear mixed models, partially because sample sizes are heterogenous across 
+graft combinations (unbalanced design) but also to reduce degrees of freedom that 
+would come from estimating intercepts and slopes for all different graft IDs:
+
+```{r}
+graft %>% 
+  count(experiment, id, nitrate) %>% 
+  ggplot(aes(x = id, y = nitrate, label = n)) +
+  geom_tile(fill = "white", colour = "black") +
+  geom_text() +
+  theme_minimal() +
+  facet_grid(experiment ~ .)
+```
+
+Here is a summary of sample sizes (for figure legends):
+
+```{r}
+graft %>% 
+  count(experiment, id, nitrate) %>% 
+  group_by(experiment) %>% 
+  summarise(min(n), max(n), median(n))
+```
+
+We thus use a random term to try and account for intra-class correlation of 
+particular graft IDs.
+
+We are primarily interested in understanding whether JD or WiH ideotype roots 
+or shoots have an effect on branching and its plasticity. We therefore start with 
+a full model that seems to make sense biologically, including terms for shoot 
+and root ideotypes, as well as their interaction with nitrate. 
+
+We further add a random terms for the particular genotypes (`id`), with random 
+slopes for nitrate. 
+Although we're not interested in it, experiment is added as a fixed effect since 
+there's only two levels.
+
+```{r}
+# Fit the model by maximum-likelihood (necessary for likelihood-ratio tests later)
+lmm1 <- lmer(totalbr ~ nitrate*shoot_type + nitrate*root_type + 
+               experiment + (nitrate|id), 
+             data = graft, REML = FALSE)
+plotLmmDiag(lmm1)
+```
+
+The model diagnostics look good, with the residuals being reasonably normal and 
+no obvious heteroskedasticity.
+
+Let's analyse the ANOVA from the model (using the function from the `car` package 
+and refitting with REML):
+
+```{r}
+car::Anova(update(lmm1, REML = TRUE), test.statistic = "F")
+```
+
+The large F values for shoot_type and its interaction with nitrate suggest these 
+are significant, but not the root_type. 
+
+We can also test these hypothesis with likelihood-ratio tests (which we report in 
+the paper).
+
+We start by considering if the root effect (and interaction) are significant:
+
+```{r}
+# Compare full model with a model that removes effect of root completely 
+## (both simple and interaction effects)
+anova(update(lmm1, . ~ . - nitrate*root_type), lmm1)
+```
+
+Likelihood ratio test suggest this is not significant. 
+
+We can perform the same test for shoot ideotype:
+
+```{r}
+# Compare with model that removes effect of root completely (both simple and interaction effects)
+anova(update(lmm1, . ~ . - nitrate*shoot_type), lmm1)
+```
+
+This is significant, as expected from the big F-value from the ANOVA on the 
+full model. This is the test result that we report in Fig. 6.
+
+Let's now check the model that excludes the Nitrate x Shoot interaction only, to 
+assess if the interaction by itself is significant:
+
+```{r}
+anova(update(lmm1, . ~ . - nitrate:shoot_type), lmm1)
+```
+
+This is significant, suggesting that there is a significant effect of the shoot 
+ideotype on the plasticity of the trait. 
+
+We can get the summary of the fully reduced model, that excludes root altogether:
+
+```{r}
+lmm2 <- update(lmm1, . ~ . - nitrate*root_type)
+summary(lmm2)
+```
+
+One way to consider the significance of this result for the Nitrate x Root or 
+Nitrate x Shoot interactions, is to point out that the  shoot of an individual 
+is a good predictor of its plasticity, whereas its root is not:
+
+```{r}
+p1 <- graft %>% 
+  #mutate(root = ifelse(root_id == "non-grafted", shoot, root)) %>% 
+  group_by(id, shoot_id, root_id, shoot_type, root_type, graft_type, type, nitrate, experiment) %>% 
+  summarise(totalbr_mean = mean(totalbr)) %>% 
+  spread(nitrate, totalbr_mean) %>% 
+  mutate(D = HN-LN) %>% 
+  gather("part", "ideotype", shoot_type, root_type) %>% 
+  mutate(part = plyr::mapvalues(part, c("root_type", "shoot_type"), c("Grouped by Root", "Grouped by Shoot"))) %>% 
+  ggplot(aes(ideotype, D, colour = graft_type, group = type, shape = type)) +
+  geom_point(position = position_dodge(0.5)) +
+  labs(colour = "Graft type", y = "Branching Plasticity", shape = "Line origin") +
+  scale_colour_manual(values = c("red3", "black", "gray48")) +
+  facet_grid(experiment ~ part, scales = "free")
+
+p1
+```
+
+This essentially agrees with ANOVA:
+
+```{r}
+aov_full <- aov(totalbr ~ nitrate*shoot_type + nitrate*root_type + 
+               experiment + nitrate*id, 
+             data = graft)
+summary(aov_full)
+```
+
+
+Just as a side note. In the plot showing the mean branching in each condition, 
+it seems like there's an interaction between nitrate response and experiment (
+the slopes of the lines are not the same between experiments). This can be 
+captured by a more complex model, which suffers from many parameters to 
+estimate, so the degrees of freedom used are higher. Just for completeness, though,
+it's shown here that the conclusions are qualitatively the same:
+
+```{r}
+# Note: fitting by ML fails
+lmm3 <- lmer(totalbr ~ nitrate*shoot_type + nitrate*root_type + 
+               experiment + (nitrate:experiment|id), 
+             data = graft, REML = TRUE)
+car::Anova(lmm3, test.statistic = "F")
+```
+
+In this case, the marginal effect of experiment is not significant, as
+it is probably captured by the variance attributed to it in the random part of 
+the model.
+
+
+## Effect of root and shoot ideotypes on flowering time
+
+We follow the same logic as above for shoot branching.
+
+```{r}
+bolt_lmm1 <- lmer(days_to_bolt ~ nitrate*shoot_type + nitrate*root_type + 
+                    experiment + (nitrate|id), 
+                  data = graft, REML = FALSE)
+plotLmmDiag(bolt_lmm1)
+```
+
+Due to the way in which the genotypes were chosen (to fit within JD and WiH 
+ideotypes), the distribution of flowering times is rather bimodal. The residuals 
+are not as good as for branching, but it still looks OK, with no obvious 
+heteroskedasticity between the two groups from the scale-location plots.
+
+We start by analysing the variance from the model:
+
+```{r}
+car::Anova(update(bolt_lmm1, REML = TRUE), test.statistic = "F")
+```
+
+As before, there is a very large F-value for `shoot_type`, although now the 
+interaction doesn't have that high value. Nitrate is also expected to have 
+less of an effect, which is also illustrated by the comparatively lower F-value.
+
+We start by testing the overall effect of roots with likelihood-ratio test:
+
+```{r}
+# Remove the root effects (root and root x nitrate)
+anova(update(bolt_lmm1, . ~ . - nitrate*root_type), bolt_lmm1)
+```
+
+Not significant. 
+
+Let's consider the shoot type:
+
+```{r}
+# Remove the root effects (root and root x nitrate)
+anova(update(bolt_lmm1, . ~ . - nitrate*shoot_type), bolt_lmm1)
+```
+
+This is significant. We should now consider if the interaction itself is 
+significant (we expect not, given the lack of plasticity for flowering):
+
+```{r}
+anova(update(bolt_lmm1, . ~ . - nitrate:shoot_type), bolt_lmm1)
+```
+
+Indeed, this interaction is not significant. So we end up with a reduced model, 
+which excludes root_type altogether, as well was the Shoot x Nitrate interaction:
+
+```{r}
+bolt_lmm2 <- lmer(days_to_bolt ~ nitrate + shoot_type + experiment + (nitrate|id), 
+                  data = graft)
+summary(bolt_lmm2)
+```
+
+```{r}
+car::Anova(bolt_lmm2, test.statistic = "F")
+```
+
+As before for shoot branching, root ideotype does not explain much variance 
+in flowering time, whereas the shoot ideotype does.
+
+Again, the shoot phenotype predict flowering time quite well:
+
+```{r}
+graft %>% 
+  #mutate(root = ifelse(root_id == "non-grafted", shoot, root)) %>% 
+  group_by(id, shoot_id, root_id, shoot_type, root_type, graft_type, type, nitrate, experiment) %>% 
+  summarise(bolt_mean = mean(days_to_bolt)) %>% 
+  spread(nitrate, bolt_mean) %>% 
+  gather("part", "ideotype", shoot_type, root_type) %>% 
+  ggplot(aes(ideotype, LN, colour = graft_type, group = type, shape = type)) +
+  geom_point(position = position_dodge(0.5)) +
+  labs(colour = "Graft type", y = "Days to flower (LN)", shape = "Line origin") +
+  scale_colour_manual(values = c("red3", "black", "gray48")) +
+  facet_grid(experiment ~ part, scales = "free")
+```
