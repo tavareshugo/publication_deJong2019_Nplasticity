@@ -1077,3 +1077,9 @@ It is clear from this plot that shoot branching is the trait with the greater
 component of plasticity, of which a good part (~26%) is likely due to genetic 
 differences between the lines.
 
+
+# Session info
+
+```{r}
+sessionInfo()
+```
