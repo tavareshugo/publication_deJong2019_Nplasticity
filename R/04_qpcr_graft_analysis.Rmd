@@ -1,11 +1,16 @@
 ---
-title: Shoot branching plasticity depends on shoot genotype
-output: html_document
+title: "de Jong et al (2018)"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# Shoot branching plasticity depends on shoot genotype
 
 The code in this document has the analysis of the RT-qPCR data for Nitrate-
 responsive genes and analysis of grafting experiments.
@@ -23,7 +28,7 @@ theme_set(theme_classic() +
                   plot.subtitle = element_text(size = 10, hjust = 0.5)))
 ```
 
-# RT-qPCR analysis
+## RT-qPCR analysis
 
 We present the qPCR results as as the fold-change between treatment and 
 control nitrate conditions. We use the $\Delta\Delta Cp$ method of 
@@ -47,11 +52,12 @@ control samples:
 $\Delta\Delta Cp = \Delta Cp_{treatment} - \Delta Cp_{control}$
 * Calculate fold change as $2^{-\Delta\Delta Cp}$
 
-First we read the data:
+### Read Data
+
+First we read and tidy the data:
 
 ```{r}
 # Read data
-# Add a unique ID
 qpcr <- read_csv("../../data/qpcr/nitrate_response_qpcr.csv") %>% 
   select(-line) %>%
   rename(line = line_name) %>% 
@@ -59,7 +65,10 @@ qpcr <- read_csv("../../data/qpcr/nitrate_response_qpcr.csv") %>%
 #gene = factor(gene) %>% relevel("GSR1")
 ```
 
-Then calculate the average across three technical replicates for each sample.
+
+### Normalise expression values
+
+1. calculate the average across three technical replicates for each sample.
 
 (Note: see this post for discussion between arithmetic and geometric means: https://www.researchgate.net/post/How_to_analyze_a_qPCR_with_2_or_3_housekeeping_genes)
 
@@ -71,17 +80,18 @@ qpcr_means <- qpcr %>%
   ungroup()
 ```
 
-Now we calculate the average for the two reference genes:
+2. calculate the average for the two reference genes:
 
 ```{r}
 # Calculate the mean expression of the two reference genes
 qpcr_means <- qpcr_means %>% 
   mutate(gene = ifelse(gene %in% c("APX3", "ubc9"), "reference", gene)) %>% 
   group_by_at(vars(-Cp_mean)) %>% 
-  summarise(Cp_mean = mean(Cp_mean))
+  summarise(Cp_mean = mean(Cp_mean)) %>% 
+  ungroup()
 ```
 
-Now we calculate the first delta-Cp: $\Delta Cp = Cp_{target} - Cp_{reference}$
+3. calculate the first delta-Cp: $\Delta Cp = Cp_{target} - Cp_{reference}$
 
 ```{r}
 # Add Cp of reference genes as a new column and calculate dCp
@@ -94,7 +104,7 @@ dcp <- qpcr_means %>%
   rename(Cp_target = Cp_mean)
 ```
 
-Now we calculate average Cp of each gene in the control condition:
+4. calculate average Cp of each gene in the control condition
 
 ```{r}
 # Calculate the mean Cp in control samples per gene and genotype
@@ -105,7 +115,7 @@ dcp <- dcp %>%
   ungroup()
 ```
 
-And finally we calculate the delta-delta-Cp:
+5. calculate the delta-delta-Cp:
 
 ```{r}
 # Calculate ddCp, the fold-change
@@ -116,7 +126,8 @@ dcp <- dcp %>%
          gene = factor(gene) %>% relevel("GSR1"))
 ```
 
-Finally, the plot in the paper:
+
+### Fig 6
 
 ```{r}
 # Plot log2(fold)
@@ -158,11 +169,12 @@ dcp %>%
 ```
 
 
-
-# Grafting analysis
+## Grafting analysis
 
 These experiments were first performed in 2013 and then repeated in 2015. The data 
 are analysed together (accounting for the potential variation between experiments).
+
+### Read data
 
 ```{r}
 graft <- read_csv("../../data/grafting/grafting_experiments.csv") %>% 
@@ -196,25 +208,29 @@ ideotypes using linear mixed models (detailed below).
 Here are the distributions of the two traits for each condition:
 
 ```{r}
-graft %>% 
+p1 <- graft %>% 
   mutate(id = gsub("_", "\n", id)) %>% 
   ggplot(aes(id, totalbr, fill = nitrate)) +
   geom_boxplot() +
   facet_grid(experiment ~ type, scales = "free_x") +
   scale_fill_manual(values = c("gray48", "grey")) +
-  theme(panel.grid = element_blank())
+  theme_bw()
 
-graft %>% 
+p2 <- graft %>% 
   mutate(id = gsub("_", "\n", id)) %>% 
   ggplot(aes(id, days_to_bolt, fill = nitrate)) +
-  geom_boxplot() +
+  geom_boxplot(width = 1) +
   facet_grid(experiment ~ type, scales = "free_x") +
   scale_fill_manual(values = c("gray48", "grey")) +
-  theme(panel.grid = element_blank())
+  theme_bw()
+
+p1 + p2 + plot_layout(ncol = 1)
 ```
 
-And here is the figures presented in the paper, which summarise things as 
-means +/- CI:
+
+### Fig 7
+
+Here is the figure presented in the paper, which summarise things as means +/- CI:
 
 ```{r}
 p1 <- graft %>% 
@@ -255,8 +271,7 @@ p2 + p1 + plot_layout(ncol = 1)
 #dev.off()
 ```
 
-
-## Effect of root and shoot ideotypes on branching
+### Effect of root and shoot ideotypes on branching
 
 ```{r}
 # load library to fit mixed models
@@ -288,7 +303,7 @@ graft %>%
   summarise(min(n), max(n), median(n))
 ```
 
-We thus use a random term to try and account for intra-class correlation of 
+We use a random term to try and account for intra-class correlation of 
 particular graft IDs.
 
 We are primarily interested in understanding whether JD or WiH ideotype roots 
@@ -298,14 +313,16 @@ and root ideotypes, as well as their interaction with nitrate.
 
 We further add a random terms for the particular genotypes (`id`), with random 
 slopes for nitrate. 
-Although we're not interested in it, experiment is added as a fixed effect since 
-there's only two levels.
+Although we're not interested in its effect, experiment is added as a fixed effect 
+(since there's only two levels).
 
 ```{r}
 # Fit the model by maximum-likelihood (necessary for likelihood-ratio tests later)
 lmm1 <- lmer(totalbr ~ nitrate*shoot_type + nitrate*root_type + 
                experiment + (nitrate|id), 
              data = graft, REML = FALSE)
+
+# Plot diagnostics
 plotLmmDiag(lmm1)
 ```
 
@@ -367,7 +384,7 @@ Nitrate x Shoot interactions, is to point out that the  shoot of an individual
 is a good predictor of its plasticity, whereas its root is not:
 
 ```{r}
-p1 <- graft %>% 
+graft %>% 
   #mutate(root = ifelse(root_id == "non-grafted", shoot, root)) %>% 
   group_by(id, shoot_id, root_id, shoot_type, root_type, graft_type, type, nitrate, experiment) %>% 
   summarise(totalbr_mean = mean(totalbr)) %>% 
@@ -380,23 +397,11 @@ p1 <- graft %>%
   labs(colour = "Graft type", y = "Branching Plasticity", shape = "Line origin") +
   scale_colour_manual(values = c("red3", "black", "gray48")) +
   facet_grid(experiment ~ part, scales = "free")
-
-p1
 ```
-
-This essentially agrees with ANOVA:
-
-```{r}
-aov_full <- aov(totalbr ~ nitrate*shoot_type + nitrate*root_type + 
-               experiment + nitrate*id, 
-             data = graft)
-summary(aov_full)
-```
-
 
 Just as a side note. In the plot showing the mean branching in each condition, 
-it seems like there's an interaction between nitrate response and experiment (
-the slopes of the lines are not the same between experiments). This can be 
+it seems like there's an interaction between nitrate response and experiment 
+(the slopes of the lines are not the same between experiments). This can be 
 captured by a more complex model, which suffers from many parameters to 
 estimate, so the degrees of freedom used are higher. Just for completeness, though,
 it's shown here that the conclusions are qualitatively the same:
@@ -494,3 +499,11 @@ graft %>%
   scale_colour_manual(values = c("red3", "black", "gray48")) +
   facet_grid(experiment ~ part, scales = "free")
 ```
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
+
