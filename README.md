@@ -8,5 +8,18 @@ There are two directories:
 * `docs` - contains rendered html pages from that code, which can be seen at: 
 https://tavareshugo.github.io/publication_deJong2018_Nplasticity
 
+All the data used by the scripts is available for download from the Cambridge 
+University data repository Appolo. A description of the data is provided there in 
+a README file.
+
+The directory structure necessary for the scripts to work is:
+
+```
+project_folder
+ |
+ |_ data - unzip the data file from the Appolo repository
+ |
+ |_ scripts - download/clone this repository to a separate directory
+```
 
 **todo:** add link to Appolo repository
