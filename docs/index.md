@@ -3,7 +3,7 @@
 contains several scripts with analysis code for de Jong et al (2018).
 
 A citable (static) version is also available from the Cambridge University data 
-repository Appolo (doi: **FIXME**).
+repository Appolo (DOI: [10.17863/CAM.20379](https://doi.org/10.17863/CAM.20379)).
 
 There are three main directories:
 
@@ -13,7 +13,7 @@ This directory contains all the R code to do the analysis and plots shown in the
 paper. 
 
 All the data used by the scripts is available for download from the Cambridge 
-University data repository Appolo (doi: **FIXME**). 
+University data repository Appolo (DOI: [10.17863/CAM.20379](https://doi.org/10.17863/CAM.20379)). 
 A description of the data is provided with the data in a README file.
 
 The directory structure necessary for the scripts to work is:
