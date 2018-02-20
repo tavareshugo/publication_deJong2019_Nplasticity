@@ -181,17 +181,25 @@ MuMIn::r.squaredGLMM(m1_magic_height)
 ```
 
 We can see that only ~4% of the variance is due to nitrate, but overall the model 
-explains ~40% of the phenotypic variance. We can also test if this "plasticity 
-model" explains a significant amount of variance compared to the previous 
-"genetic model":
+explains ~40% of the phenotypic variance. 
+
+We can also test if this "plasticity model" explains a significant amount of 
+variance compared to the previous "genetic model":
 
 ```{r}
 anova(m0_magic_height, m1_magic_height) %>% tidy
 ```
 
-The result suggests that the null hypothesis (that the two models 
-explain a similar amount of variance in height) is unlikely, leading us to conclude 
-that there is significant plasticity for height in response to nitrate.
+The result suggests that the likelihood difference between the two models 
+is very unlikely assuming they both explain a similar amount of variance in height.
+
+However, it's worth noting that the interpretation of p-values should be done with 
+care. Our sample sizes are quite big, so even small effects can increase the likelihood 
+of the model enough and thus lead to very small p-value (this will be obvious below 
+on flowering time). Although we report the results for these likelihood ratio 
+tests here, they're actually rather uninformative for our purpose, which is 
+to explore how the variance in phenotype can be partitioned into genetic and 
+non-genetic components.
 
 The previous model assumes that every genotype responds equally to the nitrate 
 (i.e. that every MAGIC line is, on average, 2.4cm taller on HN). But this is not 
@@ -209,8 +217,7 @@ to the difference between LN and HN (~6.6, which is 6.6/(10.5+6.6) ~
 `r round(6.6/(6.6+10.5)*100)`% of the _genetic_ variance), suggestting that some 
 lines vary more than others between the two treatments. 
 
-A test comparing this "GxE" model and the "plasticity model" shows that this 
-interaction is likely significant:
+Here's the likelihood ratio test comparing this "GxE" model and the "plasticity model":
 
 ```{r}
 anova(m1_magic_height, m2_magic_height) %>% tidy
@@ -224,7 +231,8 @@ p1 <- coef(m2_magic_height)$id_leyser %>%
   mutate(id = rownames(.),
          nitrateHN = `(Intercept)` + nitrateHN) %>% 
   gather("nitrate", "height", 1:2) %>% 
-  ggplot(aes(nitrate, height, group = id)) + geom_line(alpha = 0.1) +
+  ggplot(aes(nitrate, height, group = id)) + 
+  geom_line(alpha = 0.1) +
   labs(title = "Model prediction")
 
 p2 <- magic_ind %>% 
@@ -234,7 +242,7 @@ p2 <- magic_ind %>%
   geom_line(alpha = 0.1) +
   labs(title = "Means from data")
 
-p1 + p2 + plot_layout(ncol = 2)
+p1 + p2
 ```
 
 Again, we can get an estimate of the variance explained by the fixed effect 
@@ -252,7 +260,7 @@ components:
 
 * Nitrate
 * Genotype
-* GxE (plasticity)
+* GxE (genetic plasticity)
 * Residual
 
 It should be noted that it is possible that the means in each environment are 
@@ -367,16 +375,16 @@ LN, which skew the mean upwards. (this can be seen in the reaction norm plots,
 below). Ignoring those late-flowering lines, there is actually very little 
 change between the N treatments. 
 
-Finally, we can carry our test, to see if the new model explains a significant 
-portion of variance:
+Finally, the likelihood ratio test:
 
 ```{r}
 # Contrast the genetic and plasticity models
 anova(m0_magic_bolt, m1_magic_bolt) %>% tidy()
 ```
 
-From this we conclude there is a significant effect of nitrate (i.e. plasticity), 
-but the effect size seems small.
+Although the p-value of this test is small, the effect size from the model 
+is very small (an average of 1 day of flowering difference seems biologically 
+insignificant).
 
 We can now fit the _random slopes_ model, to account for variation in plasticity,
 our "GxE" model:
@@ -391,12 +399,8 @@ summary(m2_magic_bolt)
 anova(m1_magic_bolt, m2_magic_bolt) %>% tidy()
 ```
 
-From the outputs above, we can see the "GxE" model also explains a significant 
-amount of variation, compared with the previous "plasticity model", suggesting 
-significant genetic basis for plasticity. 
-
-Despite this, the variance attributed to this genetic plasticity 
-is actually quite low as will be shown below. 
+Again, despite the very low p-value of the test, from the summary above, we can 
+see that the variance attributed to genetic plasticity is actually quite low. 
 
 From the reaction norm plots, we can see that most variation comes from the 
 late-flowering lines which seem to flower quite earlier on HN than LN:
@@ -427,9 +431,8 @@ visible in the plot above, as the negative slopes in the reaction norm for late
 flowering lines on LN (these are plants struggling after more than a month on 
 low nitrate feeding).
 
-Although the model is significant, the two traits are highly correlated in the 
-two nitrate treatments, which biologically suggests low variation in plasticity 
-for this trait.
+The two traits are highly correlated in the two nitrate treatments, which 
+biologically suggests low variation in plasticity for this trait.
 
 The correlation is `r cor(magic_plas$bolt_mean_ln, magic_plas$bolt_mean_hn)` 
 from the data.
@@ -519,7 +522,8 @@ magic_ind %>%
   summarise(mean_totalbr = mean(totalbr, na.rm = TRUE))
 ```
 
-We can formally test if this model is better than the simpler "genetic model":
+We can formally test if this model is better than the simpler "genetic model"
+[ but by now we know that we don't like p-values :) ]:
 
 ```{r}
 anova(m0_magic_totalbr, m1_magic_totalbr) %>% tidy()
@@ -534,8 +538,7 @@ summary(m2_magic_totalbr)
 ```
 
 From the above we can already see that the variance in slopes is higher than the 
-genotypic variance on LN. The model explain significantly more variance than the 
-simpler "plasticity model":
+genotypic variance on LN. We don't need the test, but here it is:
 
 ```{r}
 anova(m1_magic_totalbr, m2_magic_totalbr) %>% tidy()
@@ -1065,6 +1068,7 @@ all_trait_vars %>%
   group_by(set, trait) %>% 
   mutate(variance = variance/sum(variance)*100,
          component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_gen"))) %>% 
+  ungroup() %>% 
   ggplot(aes(trait, variance, fill = component, label = round(variance))) +
   geom_bar(stat = "identity", colour = "black") +
   facet_grid(~ set, scales = "free_x", space = "free_x") +

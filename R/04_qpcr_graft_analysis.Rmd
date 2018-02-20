@@ -273,7 +273,7 @@ p2 + p1 + plot_layout(ncol = 1)
 
 ### Effect of root and shoot ideotypes on branching
 
-```{r}
+```{r, message = FALSE}
 # load library to fit mixed models
 library(lme4)
 library(broom)
@@ -339,34 +339,35 @@ car::Anova(update(lmm1, REML = TRUE), test.statistic = "F")
 The large F values for shoot_type and its interaction with nitrate suggest these 
 are significant, but not the root_type. 
 
-We can also test these hypothesis with likelihood-ratio tests (which we report in 
+We can also contrast these hypothesis with likelihood-ratio tests (which we report in 
 the paper).
 
-We start by considering if the root effect (and interaction) are significant:
+We start by considering if the root effect (and interaction) explains some of the 
+data:
 
 ```{r}
 # Compare full model with a model that removes effect of root completely 
 ## (both simple and interaction effects)
-anova(update(lmm1, . ~ . - nitrate*root_type), lmm1)
+anova(update(lmm1, . ~ . - nitrate*root_type), lmm1) %>% tidy()
 ```
 
-Likelihood ratio test suggest this is not significant. 
+Likelihood ratio test suggest that this is not significant. 
 
 We can perform the same test for shoot ideotype:
 
 ```{r}
-# Compare with model that removes effect of root completely (both simple and interaction effects)
-anova(update(lmm1, . ~ . - nitrate*shoot_type), lmm1)
+# Compare with model that removes effect of root completely (both marginal and interaction effects)
+anova(update(lmm1, . ~ . - nitrate*shoot_type), lmm1) %>% tidy()
 ```
 
-This is significant, as expected from the big F-value from the ANOVA on the 
+This seems significant, as expected from the big F-value from the ANOVA on the 
 full model. This is the test result that we report in Fig. 6.
 
 Let's now check the model that excludes the Nitrate x Shoot interaction only, to 
-assess if the interaction by itself is significant:
+assess if the interaction by itself seems significant:
 
 ```{r}
-anova(update(lmm1, . ~ . - nitrate:shoot_type), lmm1)
+anova(update(lmm1, . ~ . - nitrate:shoot_type), lmm1) %>% tidy()
 ```
 
 This is significant, suggesting that there is a significant effect of the shoot 
@@ -449,26 +450,26 @@ We start by testing the overall effect of roots with likelihood-ratio test:
 
 ```{r}
 # Remove the root effects (root and root x nitrate)
-anova(update(bolt_lmm1, . ~ . - nitrate*root_type), bolt_lmm1)
+anova(update(bolt_lmm1, . ~ . - nitrate*root_type), bolt_lmm1) %>% tidy()
 ```
 
-Not significant. 
+It does not seem significant. 
 
 Let's consider the shoot type:
 
 ```{r}
 # Remove the root effects (root and root x nitrate)
-anova(update(bolt_lmm1, . ~ . - nitrate*shoot_type), bolt_lmm1)
+anova(update(bolt_lmm1, . ~ . - nitrate*shoot_type), bolt_lmm1) %>% tidy()
 ```
 
-This is significant. We should now consider if the interaction itself is 
+This is significant. We should now consider if the interaction itself seems 
 significant (we expect not, given the lack of plasticity for flowering):
 
 ```{r}
-anova(update(bolt_lmm1, . ~ . - nitrate:shoot_type), bolt_lmm1)
+anova(update(bolt_lmm1, . ~ . - nitrate:shoot_type), bolt_lmm1) %>% tidy()
 ```
 
-Indeed, this interaction is not significant. So we end up with a reduced model, 
+Indeed, this interaction seems not significant. So we end up with a reduced model, 
 which excludes root_type altogether, as well was the Shoot x Nitrate interaction:
 
 ```{r}

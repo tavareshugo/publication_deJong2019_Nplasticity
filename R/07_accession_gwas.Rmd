@@ -18,7 +18,7 @@ accessions and heritability estimates from SNPs.
 These analysis were carried using [GCTA](http://cnsgenomics.com/software/gcta/).
 Shell scripts for these analysis are provided separately.
 
-```{r}
+```{r, message = FALSE}
 library(tidyverse)
 library(patchwork)
 

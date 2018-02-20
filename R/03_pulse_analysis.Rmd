@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Analysis of N-pulse experiments
 
-This document provides with the code to analyse data from two N-pulse experiments.
+This document provides with the code to analyse data from a small N-pulse experiment.
 
 ```{r, message = FALSE}
 library(tidyverse)
@@ -104,7 +104,8 @@ pulse_plas %>%
 # Fig 5 - Correlation between plasticity and response to a pulse
 
 In both experiments there is a tentative positive, albeit statistically unconvincing, 
-trend in that more plastic lines respond more to the pulse. 
+trend in that more plastic lines respond more to the pulse. (the 
+sample size is very small, so this is only a tentative hypothesis)
 
 ```{r}
 # Get correlation for labeling plots

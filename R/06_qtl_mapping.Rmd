@@ -117,7 +117,7 @@ package's introduction vignette (https://github.com/tavareshugo/MagicHelpR).
 
 Here, we download the genotype data and read it into R:
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Download and tidy genotype data
 if(!dir.exists("./temp_data")) dir.create("./temp_data")
 downloadArabMagic(save_dir = "./temp_data/magic_genotypes/", tidy = TRUE)
@@ -509,15 +509,6 @@ p4 <- estimateFounderEffect(magic_gen, "totalbr_mean_D", "SOC1_651") %>%
   scale_colour_manual(values = c("red3", "black")) +
   labs(x = "Accession", y = "Standardized Effect", title = "SOC1_651")
 
-# Another panel containing the comparison with GWAS-type approach (using ~1.4M SNPs)
-p5 <- qtl_results %>% filter(trait == "totalbr_mean_D") %>% 
-  ggplot(aes(bp/1e6, -log10(p))) +
-  geom_point(data = temp, colour = "grey") +
-  geom_line() +
-  facet_grid( ~ chromosome, scales = "free", space = "free_x") +
-  labs(x = "Mb") +
-  geom_hline(yintercept = 3.5, linetype = "dashed") +
-  theme(panel.grid = element_blank())
 
 p1 /
 {p3 + p2 + p4}

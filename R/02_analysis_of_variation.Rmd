@@ -36,11 +36,11 @@ theme_set(theme_classic() +
 
 There are two main datasets: accessions and MAGIC lines.
 
-For each there are three data files in the `./data/phenotypes` directory. The 
-files have the following sufixes:
+For each there are three data files in the `./data/phenotypes` directory (see the 
+README on the data directory for more details).
 
 Here, we read the trait data summarised by line, in two different formats 
-(basically, because these formats are useful for visualisation in different contexts):
+(because these formats are useful for visualisation in different contexts):
 
 ```{r, message = FALSE}
 # Read MAGIC line data
