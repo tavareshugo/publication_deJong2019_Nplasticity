@@ -29,13 +29,13 @@ project_folder
 These analysis scripts were produced using Rmarkdown and are rendered as individual 
 pages, with detailed information and code:
 
-* [Partitioning of trait variances]()
-* [Analysis of trait variation]()
-* [Analysis of N-pulse experiments]()
-* [Analysis of qPCR and grafting experiments]()
-* [Estimating broad-sense heritabilities]()
-* [QTL mapping in MAGIC lines]()
-* [QTL mapping in accessions]()
+* [Partitioning of trait variances](01_variance_partitioning.html)
+* [Analysis of trait variation](02_analysis_of_variation.html)
+* [Analysis of N-pulse experiments](03_pulse_analysis.html)
+* [Analysis of qPCR and grafting experiments](04_qpcr_graft_analysis.html)
+* [Estimating broad-sense heritabilities](05_estimating_heritabilities.html)
+* [QTL mapping in MAGIC lines](06_qtl_mapping.html)
+* [QTL mapping in accessions](07_accession_gwas.html)
 
 
 ### python
@@ -68,5 +68,3 @@ test different approaches. In the paper we report the results for the
 * `04_gwas_gcta_250k` - GWAS using the 250K SNP set. It does the GWAS scan but also 
 calculates GWAS-heritability and does the gene set-based test implemented in GCTA.
 * `04_gwas_gcta_imputed` - same as above but using the imputed SNP set.
-
-
