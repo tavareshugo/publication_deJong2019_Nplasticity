@@ -116,7 +116,7 @@ corr_labels <- pulse_plas %>%
             corr_label = corLabel(totalbr_pulse_pulse - totalbr_pulse_ln, totalbr_pulse_hn - totalbr_pulse_ln, TRUE))
 
 # Make graph
-#pdf("./figures/figure5.pdf", width = 3, height = 3)
+#pdf("./figures/figure5.pdf", width = 2.65, height = 3)
 pulse_plas %>% 
   mutate(x = totalbr_pulse_pulse - totalbr_pulse_ln,
          y =totalbr_pulse_hn - totalbr_pulse_ln) %>% 
@@ -126,7 +126,6 @@ pulse_plas %>%
   geom_text(data = corr_labels, aes(label = corr_label), hjust = 0, size = 2.5) +
   ggrepel::geom_text_repel(aes(label = id_public), size = 2.5) +
   labs(x = "Branching plasticity\nPulse HN - LN", y = "Branching plasticity\nConstant HN - LN") +
-  coord_equal(xlim = c(-1, 3), ylim = c(-1, 8)) +
   scale_x_continuous(breaks = c(0, 1, 2)) +
   scale_y_continuous(breaks = seq(0, 8, 2))
 #dev.off()
