@@ -90,5 +90,6 @@ extractVarsLmm <- function(model, id_genotype = c("id_kover", "id_gwapp", "id_le
              cor_hn_plas = cor_hn_slopes,
              cor_ln_hn = cor_ln_hn,
              r2_fixed = r2_m,
-             r2_all = r2_c)
+             r2_all = r2_c,
+             intercept = fixef(model)[1])
 }
