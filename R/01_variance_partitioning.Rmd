@@ -93,9 +93,12 @@ model (with gaussian assumptions about error distribution).
 
 ```{r}
 magic_ind %>% 
-  ggplot(aes(height)) +
-  geom_histogram() +
-  facet_grid(~ nitrate)
+  ggplot(aes(height, colour = nitrate)) +
+  stat_ecdf() + ggtitle("ecdf")
+
+magic_ind %>% 
+  ggplot(aes(sample = scale(height), colour = nitrate)) +
+  stat_qq() + geom_abline() + ggtitle("QQ plot")
 ```
 
 Because we measure the same genetically identical line (genotype) several times 
@@ -212,6 +215,13 @@ m2_magic_height <- lmer(height ~ nitrate + (nitrate|id_leyser), data = magic_ind
 summary(m2_magic_height)
 ```
 
+```{r}
+# Testing changing contrast so that we get the overall average as the intercept
+temp <- lmer(height ~ nitrate + (nitrate|id_leyser), data = magic_ind, contrasts = list(nitrate = contr.helmert(2)))
+summary(temp)
+
+```
+
 We can see that now there is an appreciable proportion of variance allocated 
 to the difference between LN and HN (~6.6, which is 6.6/(10.5+6.6) ~ 
 `r round(6.6/(6.6+10.5)*100)`% of the _genetic_ variance), suggestting that some 
@@ -294,15 +304,20 @@ with an estimated correlation of
 data.
 
 
+
+
 ### Flowering time
 
 The distribution for this trait is highly right-skewed:
 
 ```{r}
 magic_ind %>% 
-  ggplot(aes(bolt)) +
-  geom_histogram(binwidth = 1) +
-  facet_grid(~ nitrate)
+  ggplot(aes(bolt, colour = nitrate)) +
+  stat_ecdf() + ggtitle("ecdf")
+
+magic_ind %>% 
+  ggplot(aes(sample = scale(bolt), colour = nitrate)) +
+  stat_qq() + geom_abline() + ggtitle("QQ plot")
 ```
 
 This gives some problems using the "genetic model" assuming gaussian errors:
@@ -327,9 +342,13 @@ We therefore log-transform the data, to reduce the skew:
 magic_ind$boltLog <- log2(magic_ind$bolt)
 
 # plot
-ggplot(magic_ind, aes(boltLog)) +
-  geom_histogram(binwidth = 0.2) +
-  facet_grid(~ nitrate)
+magic_ind %>% 
+  ggplot(aes(boltLog, colour = nitrate)) +
+  stat_ecdf() + ggtitle("ecdf")
+
+magic_ind %>% 
+  ggplot(aes(sample = scale(boltLog), colour = nitrate)) +
+  stat_qq() + geom_abline() + ggtitle("QQ plot")
 ```
 
 In the model, this substantially attenuates the heteroskedasticity and departure 
@@ -394,6 +413,12 @@ m2_magic_bolt <- lmer(boltLog ~ nitrate + (nitrate|id_leyser), data = magic_ind)
 summary(m2_magic_bolt)
 ```
 
+
+```{r}
+extractVarsLmm(m2_magic_bolt)
+```
+
+
 ```{r}
 # Contrast plasticity and GxE models
 anova(m1_magic_bolt, m2_magic_bolt) %>% tidy()
@@ -424,8 +449,7 @@ p1 + p2
 ```
 
 There is one important observation to make: there is a negative correlation between the 
-mean values on LN and the plasticity (this is shown in the model as a correlation 
-of -0.63 between the intercept and slopes). In other words, late flowering 
+mean values on HN or LN and the plasticity. In other words, late flowering 
 plants on LN have a lower slope than those that flower earlier. This is 
 visible in the plot above, as the negative slopes in the reaction norm for late
 flowering lines on LN (these are plants struggling after more than a month on 
@@ -452,6 +476,8 @@ extractVarsLmm(m2_magic_bolt) %>%
 
 Confirming very little variation due nitrate and so, biologically, there is 
 basically no plasticity.
+
+
 
 
 #### GLMM approach
@@ -483,14 +509,19 @@ extractVarsLmm(m2_magic_bolt_glmm) %>%
 We can see that the result is qualitatively similar to the one obtained using the 
 log-transformed data above.
 
+
+
 ### Total Branches
 
 ```{r}
 # Plot distribution
 magic_ind %>% 
-  ggplot(aes(totalbr)) +
-  geom_histogram(binwidth = 1) + 
-  facet_grid(~ nitrate)
+  ggplot(aes(totalbr, colour = nitrate)) +
+  stat_ecdf() + ggtitle("ecdf")
+
+magic_ind %>% 
+  ggplot(aes(sample = scale(totalbr), colour = nitrate)) +
+  stat_qq() + geom_abline() + ggtitle("QQ plot")
 ```
 
 Although these are count data, and seem to show non-normality in 
@@ -587,6 +618,7 @@ extractVarsLmm(m2_magic_totalbr) %>%
   labs(y = "% variance") +
   geom_text(size = 3, position = position_stack(vjust = 0.5))
 ```
+
 
 
 #### GLMM approach
@@ -1012,18 +1044,19 @@ acc_ind$boltLog <- log2(acc_ind$bolt)
 acc_ind_sen$totalsilSqrt <- sqrt(acc_ind_sen$totalsil)
 
 # MAGIC line models
-m2_magic_height <- lmer(height ~ nitrate + (nitrate|id_leyser), data = magic_ind)
-m2_magic_bolt <- lmer(boltLog ~ nitrate + (nitrate|id_leyser), data = magic_ind)
-m2_magic_totalbr <- lmer(totalbr ~ nitrate + (nitrate|id_leyser), data = magic_ind)
+m2_magic_height <- lmer(height ~ nitrate + (nitrate|id_leyser), data = magic_ind, contrasts = list(nitrate = contr.helmert(2)))
+m2_magic_bolt <- lmer(boltLog ~ nitrate + (nitrate|id_leyser), data = magic_ind, contrasts = list(nitrate = contr.helmert(2)))
+m2_magic_totalbr <- lmer(totalbr ~ nitrate + (nitrate|id_leyser), data = magic_ind, contrasts = list(nitrate = contr.helmert(2)))
 
 # Accession 2-silique models
-m2_acc_height <- lmer(height ~ nitrate + (nitrate|id_leyser), data = acc_ind)
-m2_acc_bolt <- lmer(boltLog ~ nitrate + (nitrate|id_leyser), data = acc_ind, control = lmerControl(optimizer = "Nelder_Mead"))
-m2_acc_totalbr <- lmer(totalbr ~ nitrate + (nitrate|id_leyser), data = acc_ind)
+m2_acc_height <- lmer(height ~ nitrate + (nitrate|id_leyser), data = acc_ind, contrasts = list(nitrate = contr.helmert(2)))
+m2_acc_bolt <- lmer(boltLog ~ nitrate + (nitrate|id_leyser), data = acc_ind, contrasts = list(nitrate = contr.helmert(2)), 
+                    control = lmerControl(optimizer = "Nelder_Mead"))
+m2_acc_totalbr <- lmer(totalbr ~ nitrate + (nitrate|id_leyser), data = acc_ind, contrasts = list(nitrate = contr.helmert(2)))
 
 # Accession senescence models
-m2_accsen_totalbr <- lmer(totalbr ~ nitrate + (nitrate|id_leyser), data = acc_ind_sen)
-m2_accsen_totalsil <- lmer(totalsilSqrt ~ nitrate + (nitrate|id_leyser), data = acc_ind_sen)
+m2_accsen_totalbr <- lmer(totalbr ~ nitrate + (nitrate|id_leyser), data = acc_ind_sen, contrasts = list(nitrate = contr.helmert(2)))
+m2_accsen_totalsil <- lmer(totalsilSqrt ~ nitrate + (nitrate|id_leyser), data = acc_ind_sen, contrasts = list(nitrate = contr.helmert(2)))
 ```
 
 Using a custom function, we extract the variance components, and save it into 
@@ -1036,7 +1069,7 @@ magic_trait_vars <- list(bolt = extractVarsLmm(m2_magic_bolt),
                   height = extractVarsLmm(m2_magic_height),
                   branches = extractVarsLmm(m2_magic_totalbr)) %>% 
   bind_rows(.id = "trait") %>% 
-  gather("component", "variance", var_gen, var_plas, var_res, var_nitrate) %>% 
+  gather("component", "variance", var_ln, var_hn, var_plas, var_res, var_nitrate) %>% 
   mutate(set = "MAGIC lines")
 
 acc_trait_vars <- list(bolt = extractVarsLmm(m2_acc_bolt),
@@ -1045,7 +1078,7 @@ acc_trait_vars <- list(bolt = extractVarsLmm(m2_acc_bolt),
                   branches_sen = extractVarsLmm(m2_accsen_totalbr),
                   sil_sen = extractVarsLmm(m2_accsen_totalsil)) %>% 
   bind_rows(.id = "trait") %>% 
-  gather("component", "variance", var_gen, var_plas, var_res, var_nitrate) %>% 
+  gather("component", "variance", var_ln, var_hn, var_plas, var_res, var_nitrate) %>% 
   mutate(set = "Accessions")
 
 all_trait_vars <- bind_rows(magic_trait_vars, acc_trait_vars)
@@ -1059,7 +1092,18 @@ if(!file.exists("./temp_data/all_trait_variances.csv")){
 }
 ```
 
-The table above is used to produce the variance-component barplots:
+The table above is used to produce the variance-component barplots.
+
+This table shows the genetic correlations across environments (nitrate), which is 
+used to annotated the plot:
+
+```{r}
+corr_labels <- all_trait_vars %>% 
+  distinct(trait, set, cor_ln_hn) %>% 
+  mutate(cor_ln_hn = signif(cor_ln_hn, 2), set = factor(set, levels = c("MAGIC lines", "Accessions")))
+corr_labels
+```
+
 
 ```{r}
 all_trait_vars %>% 
@@ -1067,14 +1111,18 @@ all_trait_vars %>%
          set = factor(set, levels = c("MAGIC lines", "Accessions"))) %>% 
   group_by(set, trait) %>% 
   mutate(variance = variance/sum(variance)*100,
-         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_gen"))) %>% 
+         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_ln", "var_hn"))) %>% 
   ungroup() %>% 
   ggplot(aes(trait, variance, fill = component, label = round(variance))) +
-  geom_bar(stat = "identity", colour = "black") +
+  geom_col(colour = "black") +
   facet_grid(~ set, scales = "free_x", space = "free_x") +
-  scale_fill_manual(values = c("white", "gray48", "grey", "black")) +
-  geom_text(size = 3, position = position_stack(vjust = 0.5)) +
-  labs(y = "% variance", x = "Trait")
+  scale_fill_manual(values = c("#999999", "#56B4E9", "#009E73", "#E69F00", "#F0E442"),
+                    labels = c("Residual", "Genotype x Nitrate", "Nitrate", "Genotype (HN)", "Genotype (LN)")) +
+  #scale_fill_manual(values = c("white", "gray48", "grey", "black")) +
+  #geom_text(size = 3, position = position_stack(vjust = 0.5)) +
+  labs(y = "% variance", x = "Trait") +
+  geom_text(data = corr_labels, aes(x = trait, y = 102, label = cor_ln_hn), inherit.aes = FALSE,
+            size = 3)
 ```
 
 It is clear from this plot that shoot branching is the trait with the greater 
@@ -1082,8 +1130,187 @@ component of plasticity, of which a good part (~26%) is likely due to genetic
 differences between the lines.
 
 
+
+Make plot of genetic coefficient of variation:
+
+```{r}
+all_trait_vars %>% 
+  mutate(trait = factor(trait, levels = c("bolt", "height", "branches", "branches_sen", "sil_sen")),
+         set = factor(set, levels = c("MAGIC lines", "Accessions"))) %>% 
+  group_by(set, trait) %>% 
+  mutate(gcv = sqrt(variance)/intercept,
+         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_ln", "var_hn"))) %>% 
+  ungroup() %>% 
+  ggplot(aes(trait, gcv, fill = component, label = round(gcv))) +
+  geom_col(colour = "black", position = "dodge") +
+  facet_grid( ~ set, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = c("#999999", "#56B4E9", "#009E73", "#E69F00", "#F0E442"),
+                    labels = c("Residual", "Genotype x Nitrate", "Nitrate", "Genotype (HN)", "Genotype (LN)")) +
+  # scale_fill_manual(values = c("white", "gray48", "grey", "black"),
+  #                   labels = c("Res", "GxE", "E", "G"), name = NULL) +
+  labs(y = "Coefficient of variation", x = "Trait")
+```
+
+```{r}
+all_trait_vars %>% 
+  mutate(trait = factor(trait, levels = c("bolt", "height", "branches", "branches_sen", "sil_sen")),
+         set = factor(set, levels = c("MAGIC lines", "Accessions"))) %>% 
+  group_by(set, trait) %>% 
+  mutate(gcv = sqrt(variance)/intercept,
+         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_ln", "var_hn"))) %>% 
+  ungroup() %>% 
+  ggplot(aes(trait, gcv, fill = component, label = round(gcv))) +
+  geom_col(colour = "black", position = "dodge") +
+  facet_grid( ~ set, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = c("white", "gray48", "grey", "black"),
+                    labels = c("Res", "GxE", "E", "G"), name = NULL) +
+  labs(y = "Coefficient of variation", x = "Trait")
+```
+
+
+
 # Session info
 
 ```{r}
 sessionInfo()
 ```
+
+
+# Extras - `MCMCglmm`
+
+I'm trying to understand how to fit the model similar to the ones above, but 
+using `MCMCglmm`.
+
+```{r}
+library(MCMCglmm)
+
+# This was the model fitted with lme4
+# lmer(height ~ nitrate + (nitrate|id_leyser), data = acc_ind)
+
+# Trying to do this with MCMCglmm package
+mcmc_branches <- MCMCglmm(totalbr ~ nitrate, random = ~ us(nitrate):id_leyser, rcov = ~ units, 
+                          nitt = 23000, burnin = 3000, thin = 20, 
+                          data = as.data.frame(acc_ind))
+
+mcmc_height <- MCMCglmm(height ~ nitrate, random = ~ us(nitrate):id_leyser, rcov = ~ units, 
+                        nitt = 23000, burnin = 3000, thin = 20, 
+                        data = as.data.frame(acc_ind))
+
+
+# Needed to change the priors, otherwise the model failed. I'm not sure why, 
+## but suspect it's because the correlation is close to 1 between two nitrate environments...
+## Got the clue from this forum: https://stat.ethz.ch/pipermail/r-sig-mixed-models/2013q4/021286.html
+prior_bolt <- list(G = list(G1 = list(V = diag(2), nu = 0.002, alpha.mu=c(0,0), alpha.V=diag(2)*1000)))
+mcmc_bolt <- MCMCglmm(boltLog ~ nitrate, random = ~ us(nitrate):id_leyser, rcov = ~ units, 
+                 nitt = 23000, burnin = 3000, thin = 20, prior = prior_bolt, 
+                 data = as.data.frame(acc_ind))
+```
+
+```{r}
+summary(mcmc_branches)
+```
+
+```{r}
+summary(mcmc_bolt)
+```
+
+```{r}
+summary(mcmc_height)
+```
+
+
+```{r}
+diag(autocorr(temp$VCV)[2, , ])
+cor(temp$VCV)
+colMeans(temp$VCV)
+HPDinterval(temp$VCV/rowSums(temp$VCV))
+```
+
+```{r}
+vars_lmm <- extractVarsLmm(m2_acc_totalbr)
+vars_lmm
+```
+
+```{r}
+vars_lmm$cor_ln_hn*(sqrt(vars_lmm$var_ln) * sqrt(vars_lmm$var_hn))
+```
+
+
+```{r}
+summary(temp)
+```
+
+
+```{r}
+summary(m2_acc_totalbr)
+```
+
+
+
+```{r}
+m2_acc_bolt <- lmer(boltLog ~ nitrate + (nitrate|id_leyser), data = acc_ind %>% filter(!is.na(bolt)), 
+                    control = lmerControl(optimizer ="Nelder_Mead"))
+summary(m2_acc_bolt)
+```
+
+```{r}
+summary(mcmc_bolt)
+```
+
+
+
+Now try to fit a multi-trait model. Just on HN to start with.
+
+```{r}
+acc_hn <- acc_ind %>% 
+  filter(nitrate == "HN" & !is.na(height) & !is.na(totalbr)) %>% 
+  mutate_at(vars(totalbr, height), funs(scale))
+
+acc_hn %>% 
+  ggplot(aes(totalbr, height)) + geom_point()
+
+cor(scale(acc_hn$totalbr), scale(acc_hn$height))
+```
+
+
+
+```{r}
+multi_mcmc <- acc_hn %>% 
+  select(id_leyser, totalbr, height) %>% 
+  gather("phene", "value", totalbr, height) %>% 
+  as.data.frame() %>% 
+  MCMCglmm(value ~ phene, random = ~ us(phene):id_leyser, data = .,
+           nitt = 23000, burnin = 3000, thin = 20)
+```
+
+```{r}
+summary(multi_mcmc)
+```
+
+```{r}
+0.3053493/(sqrt(0.4645477) * sqrt(0.3360943))
+```
+
+
+```{r}
+multi_lmer <- acc_hn %>% 
+  select(id_leyser, totalbr, height) %>% 
+  gather("trait", "value", totalbr, height) %>% 
+  group_by(trait) %>% 
+  mutate(scaled = scale(value)) %>% 
+  lmer(scaled ~ trait + (trait|id_leyser), data = .)
+summary(multi_lmer)
+extractVarsLmm(multi_lmer)
+```
+
+
+
+```{r}
+multi_mcmc2 <- acc_hn %>% 
+  select(id_leyser, totalbr, height) %>% 
+  as.data.frame() %>% 
+  MCMCglmm(cbind(totalbr, height) ~ 1, random = ~ us(trait):id_leyser, data = .,
+           family = c("gaussian", "gaussian"),
+           nitt = 23000, burnin = 3000, thin = 20)
+```
+

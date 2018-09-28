@@ -71,23 +71,65 @@ This picture shows variance components estimated using linear mixed models (see
 separate document "01_variance_partitioning.Rmd")
 
 ```{r}
-#pdf("./figures/figure1.pdf", width = 4.5, height = 2.5)
+# Make table of correlations
+corr_labels <- all_trait_vars %>% 
+  distinct(trait, set, cor_ln_hn) %>% 
+  mutate(cor_ln_hn = signif(cor_ln_hn, 2), set = factor(set, levels = c("MAGIC lines", "Accessions")))
+
+pdf("./figures/figure1_new.pdf", width = 4.5, height = 2.5)
 all_trait_vars %>% 
   mutate(trait = factor(trait, levels = c("bolt", "height", "branches", "branches_sen", "sil_sen")),
          set = factor(set, levels = c("MAGIC lines", "Accessions"))) %>% 
   group_by(set, trait) %>% 
   mutate(variance = variance/sum(variance)*100,
-         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_gen"))) %>% 
+         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_ln", "var_hn"))) %>% 
   ungroup() %>% 
   ggplot(aes(trait, variance, fill = component, label = round(variance))) +
-  geom_bar(stat = "identity", colour = "black") +
+  geom_col(colour = "black") +
   facet_grid(~ set, scales = "free_x", space = "free_x") +
-  scale_fill_manual(labels = c("Res", "GxE", "E", "G"),
-                    values = c("white", "gray48", "grey", "black")) +
-  labs(y = "% variance", x = "Trait") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-#dev.off()
+  scale_fill_manual(values = c("#999999", "#56B4E9", "#009E73", "#E69F00", "#F0E442"),
+                    labels = c("Residual", "Genotype\nx\nNitrate", "Nitrate", "Genotype\n(HN)", "Genotype\n(LN)")) +
+  #scale_fill_manual(values = c("white", "gray48", "grey", "black")) +
+  #geom_text(size = 3, position = position_stack(vjust = 0.5)) +
+  geom_text(data = corr_labels, 
+            aes(x = trait, y = 103, label = sprintf("%0.2f", cor_ln_hn)),
+            inherit.aes = FALSE, size = 2) +
+  scale_x_discrete(labels = c("flowering", "height", "branches", 
+                              "branches\n(sen)", "siliques\n(sen)")) + 
+  labs(y = "% variance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.title.x = element_blank(),
+        legend.text.align = 0.5,
+        legend.title = element_blank())
+dev.off()
 ```
+
+```{r}
+pdf("./figures/figure1_new_supplement.pdf", width = 4.5, height = 2.5)
+all_trait_vars %>% 
+  mutate(trait = factor(trait, levels = c("bolt", "height", "branches", "branches_sen", "sil_sen")),
+         set = factor(set, levels = c("MAGIC lines", "Accessions"))) %>% 
+  group_by(set, trait) %>% 
+  mutate(gcv = sqrt(variance)/intercept,
+         component = factor(component, levels = c("var_res", "var_plas", "var_nitrate", "var_ln", "var_hn"))) %>% 
+  ungroup() %>% 
+  ggplot(aes(trait, gcv, fill = component, label = round(gcv))) +
+  geom_col(colour = "black", position = "dodge") +
+  facet_grid( ~ set, scales = "free_x", space = "free_x") +
+  scale_fill_manual(values = c("#999999", "#56B4E9", "#009E73", "#E69F00", "#F0E442"),
+                    labels = c("Residual", "Genotype\nx\nNitrate", "Nitrate", "Genotype\n(HN)", "Genotype\n(LN)")) +
+  # scale_fill_manual(values = c("white", "gray48", "grey", "black"),
+  #                   labels = c("Res", "GxE", "E", "G"), name = NULL) +
+  labs(y = "Coefficient of variation") +
+  scale_x_discrete(labels = c("flowering", "height", "branches", "branches\n(sen)", "siliques\n(sen)")) + 
+  labs(y = "% variance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.title.x = element_blank(),
+        legend.text.align = 0.5,
+        legend.title = element_blank())
+dev.off()
+```
+
 
 ### Figure 2
 
@@ -382,7 +424,7 @@ p1 <- ggplot(magic_plas, aes(x = totalbr_mean_D)) +
 ## (25 on each end of the distribution)
 magic_extremes <- magic_plas %>% 
   filter(bolt_mean_ln < 25) %>% 
-  arrange(totalbr_mean_D) %>% 
+  arrange(abs(totalbr_mean_D)) %>% 
   slice(c(1:25, (n()-24):n())) %>% 
   mutate(plastic_category = rep(c("Least plastic", "Most plastic"), each = 25)) %>% 
   select(id_kover, plastic_category, totalbr_mean_D)
@@ -449,6 +491,49 @@ sum(!is.na(magic_plas$bolt_mean_ln))
 sum(magic_plas$bolt_mean_ln < 25)
 ```
 
+Reaction norm graph:
+
+```{r}
+# early flowering magic lines
+magic_filter <- magic_plas %>% filter(bolt_mean_ln < 25) %>% pull(id_kover)
+
+# Ordered by average flowering time in both nitrates
+p1 <- magic_sum %>% 
+  filter(id_kover %in% magic_filter) %>% 
+  group_by(id_kover) %>% 
+  mutate(bolt_avg = mean(bolt_mean)) %>% 
+  ungroup() %>% 
+  mutate(id_kover = fct_reorder(id_kover, -bolt_avg)) %>% 
+  ggplot(aes(nitrate, totalbr_mean)) + 
+  geom_line(aes(group = id_kover, colour = bolt_avg), alpha = 0.5, size = 1) +
+  scale_colour_viridis_c() + 
+  theme(text = element_text(size = 12),
+        legend.position = c(1, 1), legend.justification = c(1, 1))
+
+p1
+
+temp <- magic_extremes %>% 
+  select(id_kover, plastic_category) %>% 
+  full_join(magic_sum, by = "id_kover") %>% 
+  filter(id_kover %in% magic_filter)
+
+temp %>% 
+  ggplot(aes(nitrate, totalbr_mean, group = id_kover)) + 
+  geom_line(alpha = 0.3) +
+  geom_line(data = filter(temp, plastic_category == "Most plastic"), aes(colour = "25 most plastic")) +
+  geom_line(data = filter(temp, plastic_category == "Least plastic"), aes(colour = "25 least plastic")) +
+  geom_point(data = filter(temp, plastic_category == "Most plastic"), aes(colour = "25 most plastic")) +
+  geom_point(data = filter(temp, plastic_category == "Least plastic"), aes(colour = "25 least plastic")) +
+  scale_colour_viridis_d()
+
+p2 <- magic_extremes %>% 
+  ggplot(aes(nitrate, totalbr_mean, group = id_kover, colour = plastic_category)) + 
+  geom_line() +
+  geom_point() +
+  scale_colour_viridis_d() + theme(legend.position = "none", text = element_text(size = 12))
+
+p1 + p2 + plot_layout(ncol = 2)
+```
 
 
 ### Figure 4
@@ -578,6 +663,156 @@ acc_plas_sen %>%
   stat_smooth(method = "lm", se = FALSE)
 ```
 
+
+Distribution of plasticity in MAGIC and Accessions
+
+```{r}
+select(acc_plas, id = id_leyser, totalbr_mean_D) %>% 
+  mutate(set = "accessions") %>% 
+  bind_rows(select(magic_plas, id = id_leyser, totalbr_mean_D)) %>% 
+  mutate(set = ifelse(is.na(set), "MAGIC", set)) %>% 
+  ggplot(aes(set, totalbr_mean_D)) + 
+  geom_hline(yintercept = 0, linetype = 2, colour = "grey") +
+  geom_violin(fill = "grey", alpha = 0.5) +
+  geom_boxplot(width = 0.05) +
+  labs(x = "", y = "Shoot branching plasticity\n(HN - LN)") +
+  theme(text = element_text(size = 12))
+```
+
+#### PCA
+
+Trying out principal components analysis on these data.
+
+```{r}
+library(broom)
+library(ggfortify)
+
+magic_pca <- magic_sum %>% 
+  select(matches("_mean$")) %>% 
+  prcomp(center = TRUE, scale = TRUE)
+
+pca_var <- tidy(magic_pca, "d") %>% 
+  mutate(label = paste0("PC", PC, " (", round(percent*100), "%)"))
+
+p1 <- tidy(magic_pca, "pcs") %>% 
+  ggplot(aes(PC, cumulative*100)) + geom_point() + geom_line() +
+  labs(x = "PC", y = "Cumulative variance explained (%)")
+
+p2 <- augment(magic_pca, magic_sum)  %>% 
+  ggplot(aes(.fittedPC1, .fittedPC2)) + 
+  geom_point(aes(colour = nitrate)) +
+  scale_colour_viridis_d() +
+  labs(x = pca_var$label[1], y = pca_var$label[2])
+
+p3 <- magic_pca$rotation %>% 
+  as_tibble(rownames = "trait") %>% 
+  mutate(trait = str_remove(trait, "_mean")) %>% 
+  ggplot() +
+  geom_segment(aes(x = 0, xend = PC1, y = 0, yend = PC2), arrow = arrow(length = unit(0.1, "in"), type = "closed"), colour = "steelblue") +
+  geom_text(aes(x = PC1, y = PC2, label = trait), nudge_y = 0.03) +
+  labs(x = pca_var$label[1], y = pca_var$label[2])
+
+#pdf("~/temp/pca_magic.pdf", width = 8, height = 4)
+p2 + theme(text = element_text(size = 20)) + p3 + theme(text = element_text(size = 20)) + plot_layout(ncol = 1)
+#dev.off()
+```
+
+For the accessions:
+
+```{r}
+acc_pca <- acc_sum %>% 
+  filter(set == "silique") %>% 
+  select(matches("_mean$"), -totalsil_mean, -boltLog_mean, -totalbrSqrt_mean) %>% 
+  mutate(inactive_mean = nodes_mean - cauline_mean) %>% 
+  prcomp(center = TRUE, scale = TRUE)
+
+pca_var <- tidy(acc_pca, "d") %>% 
+  mutate(label = paste0("PC", PC, " (", round(percent*100), "%)"))
+
+p1 <- tidy(acc_pca, "d") %>% 
+  ggplot(aes(PC, cumulative*100)) + geom_point() + geom_line() +
+  labs(x = "PC", y = "Cumulative variance explained (%)")
+
+p2 <- augment(acc_pca, acc_sum)  %>% 
+  ggplot(aes(.fittedPC1, .fittedPC2)) + 
+  geom_point(aes(colour = nitrate)) +
+  scale_colour_viridis_d() +
+  labs(x = pca_var$label[1], y = pca_var$label[2])
+
+p3 <- acc_pca$rotation %>% 
+  as_tibble(rownames = "trait") %>% 
+  mutate(trait = str_remove(trait, "_mean")) %>% 
+  ggplot() +
+  geom_segment(aes(x = 0, xend = PC1, y = 0, yend = PC2), arrow = arrow(length = unit(0.1, "in"), type = "closed"), colour = "steelblue") +
+  geom_text(aes(x = PC1, y = PC2, label = trait), nudge_y = 0.03) +
+  labs(x = pca_var$label[1], y = pca_var$label[2])
+
+p2 + p3 + plot_layout(ncol = 1)
+
+```
+
+
+```{r}
+library(corrr)
+
+magic_plas %>% 
+  select(matches("_mean_hn|_mean_ln")) %>% 
+  select(matches("totalbr|height|bolt")) %>% 
+  rename_all(funs(str_remove(., "_mean"))) %>% 
+  correlate(method = "spearman") %>% 
+  network_plot(min_cor = 0.2, colours = c("steelblue", "white", "brown")) +
+  ggtitle("MAGIC")
+
+acc_plas %>% 
+  filter(set == "silique") %>% 
+  select(matches("_mean_hn|_mean_ln"), -matches("Log|Sqrt")) %>% 
+  select(matches("totalbr|height|bolt")) %>% 
+  rename_all(funs(str_remove(., "_mean"))) %>% 
+  correlate(method = "spearman") %>% 
+  network_plot(min_cor = 0.2, colours = c("steelblue", "white", "brown")) +
+  ggtitle("Accessions")
+```
+
+
+Using [umap](https://cran.r-project.org/web/packages/umap/index.html) package.
+
+```{r}
+library(umap)
+early_magic <- magic_plas %>% filter(bolt_mean_ln < 25) %>% pull(id_leyser)
+
+magic_umap <- magic_sum %>% 
+  #filter(id_leyser %in% early_magic) %>% 
+  select(matches("_mean$")) %>% 
+  umap()
+
+magic_umap$layout %>% 
+  as_tibble() %>% 
+  bind_cols(magic_sum) %>% 
+  ggplot(aes(V1, V2)) + geom_point(aes(colour = nitrate))
+
+
+```
+
+```{r}
+magic_umap$layout %>% 
+  as_tibble() %>% 
+  bind_cols(magic_sum) %>% 
+  group_by(id_leyser) %>% 
+  mutate(plast = totalbr_mean[nitrate == "HN"] - totalbr_mean[nitrate == "LN"]) %>% 
+  ungroup() %>% 
+  ggplot(aes(V1, V2, colour = plast)) + geom_point() +
+  viridis::scale_color_viridis()
+```
+
+```{r}
+magic_umap$layout %>% 
+  as_tibble() %>% 
+  bind_cols(magic_sum) %>% 
+  group_by(id_leyser) %>% 
+  mutate(plast = totalbr_mean[nitrate == "HN"] - totalbr_mean[nitrate == "LN"]) %>% 
+  ungroup() %>% 
+  ggplot(aes(V1, plast, colour = nitrate)) + geom_point()
+```
 
 
 # Session info
