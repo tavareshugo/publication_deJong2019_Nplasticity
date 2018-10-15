@@ -92,5 +92,9 @@ gcta64 --bfile ./genotypes/imputed/pygwas_genotypes_maf5 \
 --outfile=./phenotypes/limix/accession_phenotypes_silique.hdf5
 
 /home/hugot/software/anaconda2/2.4.0/bin/limix_converter/limix_converter \
+--csv=./phenotypes/limix/accession_phenotypes_silique_early.csv \
+--outfile=./phenotypes/limix/accession_phenotypes_silique_early.hdf5
+
+/home/hugot/software/anaconda2/2.4.0/bin/limix_converter/limix_converter \
 --csv=./phenotypes/limix/accession_phenotypes_senescence.csv \
 --outfile=./phenotypes/limix/accession_phenotypes_senescence.hdf5
