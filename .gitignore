@@ -1,3 +1,9 @@
 .Rhistory
-R/figures
-R/temp_data
+scripts/R/figures
+scripts/R/temp_data
+data
+data_processed
+.Rproj.user
+figures/
+*.stdout
+

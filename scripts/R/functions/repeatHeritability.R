@@ -71,8 +71,8 @@ repeatHeritability <- function(phenotype, genotype,
   
   # Return the Upper and Lower CI for each heritability
   boot_fits %>% 
-    summarise_all(funs(lo = quantile(., c((1-ci)/2)),
-                       hi = quantile(., ci + (1-ci)/2)))
+    summarise_all(list(lo = ~ quantile(., c((1-ci)/2)),
+                       hi = ~ quantile(., ci + (1-ci)/2)))
 }
 
 
