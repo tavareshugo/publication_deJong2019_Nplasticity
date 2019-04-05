@@ -1,6 +1,6 @@
 ########## Permute LMM model with R/qtl2 imputations ############
 
-# This scripts runs a linear mixed model on each marker using permuted genotypes
+# This scripts runs a linear mixed model on each marker using individual data
 
 library(qtl2)
 library(magrittr)
@@ -139,8 +139,8 @@ f_tests <- merge(markers, f_tests, by = "marker", all = TRUE)
 
 # Save output
 readr::write_csv(lod_scores,
-                 "./data/qtl_magic/qtl_scans_lmm.csv")
+                 "./data_processed/qtl_magic/qtl_scans_lmm.csv")
 
 readr::write_csv(f_tests,
-                 "./data/qtl_magic/qtl_scans_lmm_ftest.csv")
+                 "./data_processed/qtl_magic/qtl_scans_lmm_ftest.csv")
 
