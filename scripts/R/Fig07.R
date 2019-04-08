@@ -1,6 +1,8 @@
-##
-# Figure 8
-##
+#-----------------------------#
+#     de Jong et al 2019      #
+# Code to reproduce Figure 07 #
+#-----------------------------#
+
 
 #### setup ####
 
@@ -9,28 +11,25 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), 
-                  text = element_text(size = 8),
-                  plot.title = element_text(hjust = -0.07, size = 10, face = "bold", 
-                                            margin = margin(t = -5, b = 1)),
-                  plot.subtitle = element_text(size = 10, hjust = 0.5)))
+            theme(panel.grid = element_blank(), text = element_text(size = 8)))
 
 
 #### Read data ####
 
 # QTL scan results
-qtl_results <- read_csv("../../data/qtl_magic/qtl2_scans_lm.csv")
-qtl_thresh <- read_csv("../../data/qtl_magic/qtl2_scans_lm_perm.csv") %>% 
+qtl_results <- read_csv("./data_processed/qtl_magic/qtl2_scans_lm.csv")
+qtl_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lm_perm.csv") %>% 
   filter(level == 0.05)
 
 # Linear mixed model results
-qtl_lmm <- read_csv("../../data/qtl_magic/qtl_scans_lmm.csv") %>% 
+qtl_lmm <- read_csv("./data_processed/qtl_magic/qtl_scans_lmm.csv") %>% 
   select(-LOD_full) %>% 
   gather("test", "LOD", matches("LOD")) %>% 
   mutate(test = str_remove(test, "LOD_"))
-qtl_lmm_thresh <- read_csv("../../data/qtl_magic/qtl2_scans_lmm_perm.csv") %>% 
+
+qtl_lmm_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lmm_perm.csv") %>% 
   select(-LOD_full, -seed) %>% 
-  summarise_all(funs(threshold = quantile(., probs = 0.95))) %>% 
+  summarise_all(list(threshold = ~ quantile(., probs = 0.95))) %>% 
   gather("test", "threshold") %>% 
   mutate(test = str_remove(test, "LOD_")) %>% 
   separate(test, c("test", "level"), sep = "_") 
@@ -62,8 +61,9 @@ sig_lmm <- qtl_lmm %>%
   ungroup()
 
 
-#### Panel A
+#### make plots ####
 
+# Panel A
 p1 <- qtl_results %>% 
   filter(grepl("bolt", trait)) %>% 
   ggplot(aes(bp/1e6, LOD)) +
@@ -78,8 +78,7 @@ p1 <- qtl_results %>%
   scale_x_continuous(breaks = seq(0, 30, 10))
 
 
-#### Panel B
-
+# Panel B
 p2 <- qtl_results %>% 
   filter(grepl("totalbr", trait)) %>% 
   ggplot(aes(bp/1e6, LOD)) +
@@ -96,9 +95,7 @@ p2 <- qtl_results %>%
   scale_x_continuous(breaks = seq(0, 30, 10))
 
 
-#### Panel C
-
-# Build the plot
+# Panel C
 p3 <- qtl_lmm %>% 
   mutate(test = str_remove(test, "LOD_")) %>% 
   ggplot(aes(bp/1e6, LOD)) +
@@ -115,10 +112,9 @@ p3 <- qtl_lmm %>%
         legend.position = "none")
 
 
-#### Assemble panels
-
+# Assemble panels
 # This was further annotated in Inkscape
-pdf("./figures/figure8.pdf", width = 7, height = 8)
+pdf("./figures/figure7.pdf", width = 7, height = 8)
 p1 + p2 + p3 + plot_layout(ncol = 1, heights = c(2/9, 3/9, 2/9))
 dev.off()
 
