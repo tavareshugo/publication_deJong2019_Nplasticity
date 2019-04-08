@@ -26,8 +26,8 @@ library(tidyverse)
 library(lme4)
 
 # Custom functions
-source("scripts/R/functions/extractVarsLmm.R")
-source("scripts/R/functions/repeatHeritability.R")
+source("./scripts/R/functions/extractVarsLmm.R")
+source("./scripts/R/functions/repeatHeritability.R")
 
 
 #
@@ -92,6 +92,7 @@ traits <- list(
 )
 
 # Loop through list to calculate heritabilities per nitrate
+# takes a while - grab a cup of tea!
 hers <- map_df(traits, 
                function(x){
                  names(x) <- c("nitrate", "genotype", "phenotype")

@@ -1,16 +1,22 @@
-# Analysis code for publication de Jong et al. 2018
+# Analysis code for publication de Jong et al. 2019
 
-This repository contains code used in the analysis of data from de Jong et al. 2018.
+**TODO**
 
-There are two directories:
+* add link to appolo
+* add instructions to download data and scripts into the right directory structure
 
-* `R` - contains R code in Rmarkdown files
-* `docs` - contains rendered html pages from that code, which can be seen at: 
-https://tavareshugo.github.io/publication_deJong2018_Nplasticity
+This repository contains code used in the analysis of data from de Jong et al. 2019 
+(add link once published...).
 
-All the data used by the scripts is available for download from the Cambridge 
-University data repository Appolo. A description of the data is provided there in 
-a README file.
+Directories:
+
+
+* `docs` - **TODO**
+* `scripts` - contains shell, python and R code to reproduce analysis shown in the paper
+
+Data used by the scripts is available for download from the Cambridge 
+University data repository Appolo (**TODO** add DOI link). 
+A description of the data is provided there in a README file.
 
 The directory structure necessary for the scripts to work is:
 
@@ -19,7 +25,9 @@ project_folder
  |
  |_ data - unzip the data file from the Appolo repository
  |
+ |_ data_processed - provided in the Appolo repository or recreated from our code
+ |
  |_ scripts - download/clone this repository to a separate directory
 ```
 
-**todo:** add link to Appolo repository
+
