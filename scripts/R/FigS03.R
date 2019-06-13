@@ -1,6 +1,6 @@
 #-----------------------------#
 #     de Jong et al 2019      #
-# Code to reproduce Figure 07 #
+# Code to reproduce Figure S3 #
 #-----------------------------#
 
 #### setup ####

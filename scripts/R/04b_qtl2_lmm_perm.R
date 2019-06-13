@@ -40,11 +40,18 @@ setwd(opt$workdir)
 #### Read data ####
 #-----------------#
 
+data_genoprob <- "./data_processed/qtl_magic/magic_qtl2_genoprob.rds"
+data_pheno <- "./data_processed/phenotypes/magic_individual.rds"
+
+if(!file.exists(data_genoprob) | !file.exists(data_pheno)){
+  stop("Could not find all data files. Please run '01a_process_magic_data.R' and '03_magic_qtl2_scans.R' scripts first.")
+}
+
 # QTL2 genotype data
-magic_qtl2_gen <- readRDS("./data_processed/qtl_magic/magic_qtl2_genoprob.rds")
+magic_qtl2_gen <- readRDS(data_genoprob)
 
 # Phenotype data
-pheno <- read_rds("./data_processed/phenotypes/magic_individual.rds")
+pheno <- read_rds(data_pheno)
 
 # Subset to retain only those that flower early (contained in the genotype object)
 early_magic <- rownames(magic_qtl2_gen[[1]])
@@ -138,16 +145,16 @@ max_lod <- data.frame(seed = opt$seed,
                       LOD_G = max(lod_scores$LOD_G))
 
 # Save into a file 
-outfile <- "./data/qtl_magic/qtl2_scans_lmm_perm.csv"
+outfile <- "./data_processed/qtl_magic/qtl2_scans_lmm_perm.csv"
 
 # If file exists append, otherwise write new file (to ensure we get column names)
 if(file.exists(outfile)){
   readr::write_csv(max_lod,
-                   path = paste0("./data/qtl_magic/qtl2_scans_lmm_perm.csv"),
+                   path = outfile,
                    append = TRUE)
 } else {
   readr::write_csv(max_lod,
-                   path = paste0("./data/qtl_magic/qtl2_scans_lmm_perm.csv"))
+                   path = outfile)
 }
 
 ## Deprecated - writing individual files

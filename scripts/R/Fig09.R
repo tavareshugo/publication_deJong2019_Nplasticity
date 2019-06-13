@@ -1,7 +1,7 @@
-##
-# Fig 10
-# Get BLUP founder effects for a few of the QTL
-##
+#-----------------------------#
+#     de Jong et al 2019      #
+# Code to reproduce Figure 09 #
+#-----------------------------#
 
 #### setup ####
 

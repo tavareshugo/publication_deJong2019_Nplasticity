@@ -1,12 +1,13 @@
-####
-# S1 Table - variance explained by QTL
-###
+#-----------------------------#
+#     de Jong et al 2019      #
+# Code to reproduce Table S2  #
+#-----------------------------#
 
 library(qtl2)
 library(tidyverse)
 library(patchwork)
 
-source("./functions/repeatHeritability.R")
+source("./scripts/R/functions/repeatHeritability.R")
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
@@ -17,28 +18,28 @@ theme_set(theme_bw() +
 #### Read data ####
 
 # QTL scan results
-qtl_results <- read_csv("../../data/qtl_magic/qtl2_scans_lm.csv")
-qtl_thresh <- read_csv("../../data/qtl_magic/qtl2_scans_lm_perm.csv") %>% 
+qtl_results <- read_csv("./data_processed/qtl_magic/qtl2_scans_lm.csv")
+qtl_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lm_perm.csv") %>% 
   filter(level == 0.05)
 
 # Linear mixed model results
-qtl_lmm <- read_csv("../../data/qtl_magic/qtl_scans_lmm.csv") %>% 
+qtl_lmm <- read_csv("./data_processed/qtl_magic/qtl2_scans_lmm.csv") %>% 
   select(-LOD_full) %>% 
   gather("test", "LOD", matches("LOD")) %>% 
   mutate(test = str_remove(test, "LOD_"))
-qtl_lmm_thresh <- read_csv("../../data/qtl_magic/qtl2_scans_lmm_perm.csv") %>% 
+qtl_lmm_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lmm_perm.csv") %>% 
   select(-LOD_full, -seed) %>% 
-  summarise_all(funs(threshold = quantile(., probs = 0.95))) %>% 
+  summarise_all(list(`0.05` = ~ quantile(., probs = 0.95))) %>% 
   gather("test", "threshold") %>% 
   mutate(test = str_remove(test, "LOD_")) %>% 
-  separate(test, c("test", "level"), sep = "_") 
+  separate(test, c("test", "level"), sep = "_", convert = TRUE) 
 
 # Genotype objects
-magic_gen <- read_rds("../../data/qtl_magic/magic_qtl2_cross2.rds")
-magic_prob <- read_rds("../../data/qtl_magic/magic_qtl2_genoprob.rds")
+magic_gen <- read_rds("./data_processed/qtl_magic/magic_qtl2_cross2.rds")
+magic_prob <- read_rds("./data_processed/qtl_magic/magic_qtl2_genoprob.rds")
 
 # Phenotype data
-pheno <- readr::read_csv("../../data/phenotypes/magic_individual.csv")
+pheno <- read_rds("./data_processed/phenotypes/magic_individual.rds")
 
 # Subset to retain only those that flower early (contained in the genotype object)
 pheno <- subset(pheno, id_kover %in% ind_ids(magic_gen))
@@ -58,20 +59,20 @@ sig_lm <- qtl_results %>%
   slice(1) %>% 
   ungroup()
 
-# For mixed model
-sig_lmm <- qtl_lmm %>% 
-  # Join with thresholds table 
-  full_join(qtl_lmm_thresh, by = "test") %>% 
-  # Keep those above threshold
-  filter(LOD >= threshold) %>%
-  # Take top LOD score for each sign level, test and chromosome 
-  group_by(level, test, chrom) %>% 
-  arrange(desc(LOD)) %>% 
-  slice(1) %>% 
-  ungroup()
-
-# Combine all markers
-peak_markers <- bind_rows(sig_lm, sig_lmm)
+# # For mixed model
+# sig_lmm <- qtl_lmm %>% 
+#   # Join with thresholds table 
+#   full_join(qtl_lmm_thresh, by = "test") %>% 
+#   # Keep those above threshold
+#   filter(LOD >= threshold) %>%
+#   # Take top LOD score for each sign level, test and chromosome 
+#   group_by(level, test, chrom) %>% 
+#   arrange(desc(LOD)) %>% 
+#   slice(1) %>% 
+#   ungroup()
+# 
+# # Combine all markers
+# peak_markers <- bind_rows(sig_lm, sig_lmm)
 
 
 #### Variance explained by individual QTL ####
@@ -151,19 +152,15 @@ sig_lm %>% arrange(covariate, trait, nitrate, chromosome, bp)
 
 #### Joint SNP variance explained ####
 
-# Flowering time markers
-ft_markers <- c("MN1_23474588", "MN5_4327715", "MN1_24322296", "MN5_4327715")
-
+# # Flowering time markers
+# ft_markers <- c("MN1_23474588", "MN5_4327715", "MN1_24322296", "MN5_4327715")
 # 
+# # Shoot branching markers
+# sb_markers <- c("MASC00557", "MN5_26708459", 
+#                 "MN1_26278413", "MN3_5910420", 
+#                 "SOC1_461", "MN5_5452600")
 
-# Shoot branching markers
-sb_markers <- c("MASC00557", "MN5_26708459", 
-                "MN1_26278413", "MN3_5910420", 
-                "SOC1_461", "MN5_5452600")
-
-
-
-
+# Make a table with marker locations
 peak_markers <- tibble(
   chr = c(1, 5, 1, 1, 5, 1, 3, 2, 5),
   peak = c("FT.HN.1", "FT.HN.5/FT.LN.5", "FT.LN.1", 

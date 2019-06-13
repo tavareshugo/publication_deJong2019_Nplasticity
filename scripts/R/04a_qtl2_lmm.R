@@ -1,4 +1,4 @@
-########## Permute LMM model with R/qtl2 imputations ############
+########## LMM model with R/qtl2 imputations ############
 
 # This scripts runs a linear mixed model on each marker using individual data
 
@@ -10,12 +10,20 @@ library(magrittr)
 #### Read data ####
 #-----------------#
 
+data_cross <- "./data_processed/qtl_magic/magic_qtl2_cross2.rds"
+data_genoprob <- "./data_processed/qtl_magic/magic_qtl2_genoprob.rds"
+data_pheno <- "./data_processed/phenotypes/magic_individual.rds"
+
+if(!file.exists(data_cross) | !file.exists(data_genoprob) | !file.exists(data_pheno)){
+  stop("Could not find all data files. Please run '01a_process_magic_data.R' and '03_magic_qtl2_scans.R' scripts first.")
+}
+
 # QTL2 data
-magic_qtl2 <- readRDS("./data_processed/qtl_magic/magic_qtl2_cross2.rds")
-magic_qtl2_gen <- readRDS("./data_processed/qtl_magic/magic_qtl2_genoprob.rds")
+magic_qtl2 <- readRDS(data_cross)
+magic_qtl2_gen <- readRDS(data_genoprob)
 
 # Phenotype data
-pheno <- read_rds("./data_processed/phenotypes/magic_individual.rds")
+pheno <- read_rds(data_pheno)
 
 # Subset to retain only those that flower early (contained in the genotype object)
 #early_magic <- rownames(magic_qtl2$pheno)[magic_qtl2$pheno[, "bolt_mean_ln"] < 25]

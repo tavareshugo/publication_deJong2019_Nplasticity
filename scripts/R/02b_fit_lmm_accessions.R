@@ -13,7 +13,7 @@ data_sil <- "./data_processed/phenotypes/accessions_individual_silique.rds"
 data_sen <- "./data_processed/phenotypes/accessions_individual_senescence.rds"
 
 if(!file.exists(data_sil) | !file.exists(data_sen)){
-  stop("Could not find data files.")
+  stop("Could not find data files. Please run 01b_process_accessions_data.R script first.")
 }
 
 # Create output directory

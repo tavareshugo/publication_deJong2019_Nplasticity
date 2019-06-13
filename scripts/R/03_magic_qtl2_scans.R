@@ -10,7 +10,7 @@
 data_file <- "./data_processed/phenotypes/magic_plasticity.rds"
 
 if(!file.exists(data_file)){
-  stop("Could not find", data_file)
+  stop("Could not find", data_file, ". Please run 01a_process_magic_data.R script first.")
 }
 
 # Create output directory

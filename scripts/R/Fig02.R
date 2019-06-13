@@ -90,6 +90,31 @@ p1.1 <- magic_sum %>%
   coord_cartesian(ylim = c(0, 10)) +
   labs(x = "Nitrate", y = "Total Branches")
 
+magic_sum %>% 
+  group_by(id_kover) %>% 
+  mutate(direction = ifelse(totalbr_mean[nitrate == "HN"] > totalbr_mean[nitrate == "LN"], "+", "-")) %>% 
+  ggplot(aes(nitrate, totalbr_mean)) + 
+  geom_line(aes(group = id_kover, colour = direction), alpha = 0.1, size = 1) +
+  # geom_line(data = filter(magic_sum, id_leyser %in% magic_highlight), colour = "brown", aes(group = id_leyser), 
+  #           alpha = 0.1, size = 1) +
+  coord_cartesian(ylim = c(0, 10)) +
+  scale_colour_brewer(palette = "Dark2") +
+  guides(colour = guide_legend(override.aes= list(alpha = 1))) +
+  labs(x = "Nitrate", y = "Total Branches")
+
+magic_sum %>% 
+  group_by(id_kover) %>% 
+  mutate(plasticity = totalbr_mean[nitrate == "HN"] - totalbr_mean[nitrate == "LN"]) %>% 
+  ggplot(aes(nitrate, totalbr_mean)) + 
+  geom_line(aes(group = id_kover, colour = plasticity), alpha = 0.3, size = 1) +
+  # geom_line(data = filter(magic_sum, id_leyser %in% magic_highlight), colour = "brown", aes(group = id_leyser), 
+  #           alpha = 0.1, size = 1) +
+  coord_cartesian(ylim = c(0, 10)) +
+  scale_colour_viridis_c() +
+  #scale_colour_gradient2(low = "steelblue", mid = "grey48", high = "brown") +
+  #guides(colour = guide_legend(override.aes= list(alpha = 1))) +
+  labs(x = "Nitrate", y = "Total Branches")
+
 p1.2 <- magic_plas %>% 
   ggplot(aes(totalbr_rdpi)) + 
   geom_histogram(fill = "black", binwidth = 0.1) +
