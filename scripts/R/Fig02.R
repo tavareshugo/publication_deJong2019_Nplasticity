@@ -76,50 +76,29 @@ p1 <- ggplot(magic_plas, aes(totalbr_mean_hn, totalbr_mean_ln)) +
   annotate(geom = "text", x = 0, y = 10, 
            label = corLabel(magic_plas$totalbr_mean_hn, magic_plas$totalbr_mean_ln, TRUE),
            hjust = 0, vjust = 1, size = 2.5) +
-  coord_cartesian(xlim = c(0, 10), ylim = c(0, 10)) +
   geom_abline(linetype = "dashed") +
   labs(x = "Total Branches (HN)", y = "Total Branches (LN)") +
   scale_x_continuous(breaks = seq(0, 10, 2)) +
-  scale_y_continuous(breaks = seq(0, 10, 2))
+  scale_y_continuous(breaks = seq(0, 10, 2)) +
+  coord_fixed(xlim = c(0, 10), ylim = c(0, 10))
 
-p1.1 <- magic_sum %>% 
-  ggplot(aes(nitrate, totalbr_mean)) + 
-  geom_line(aes(group = id_kover), alpha = 0.1, size = 1) +
-  geom_line(data = filter(magic_sum, id_leyser %in% magic_highlight), colour = "brown", aes(group = id_leyser), 
-            alpha = 0.1, size = 1) +
+p1.1 <- magic_plas %>% 
+  select(id_leyser, totalbr_rdpi) %>% 
+  full_join(magic_sum, by = "id_leyser") %>% 
+  ggplot(aes(nitrate, totalbr_mean)) +
+  geom_line(aes(group = id_leyser, colour = totalbr_rdpi), alpha = 0.3, size = 1) +
   coord_cartesian(ylim = c(0, 10)) +
-  labs(x = "Nitrate", y = "Total Branches")
-
-magic_sum %>% 
-  group_by(id_kover) %>% 
-  mutate(direction = ifelse(totalbr_mean[nitrate == "HN"] > totalbr_mean[nitrate == "LN"], "+", "-")) %>% 
-  ggplot(aes(nitrate, totalbr_mean)) + 
-  geom_line(aes(group = id_kover, colour = direction), alpha = 0.1, size = 1) +
-  # geom_line(data = filter(magic_sum, id_leyser %in% magic_highlight), colour = "brown", aes(group = id_leyser), 
-  #           alpha = 0.1, size = 1) +
-  coord_cartesian(ylim = c(0, 10)) +
-  scale_colour_brewer(palette = "Dark2") +
-  guides(colour = guide_legend(override.aes= list(alpha = 1))) +
-  labs(x = "Nitrate", y = "Total Branches")
-
-magic_sum %>% 
-  group_by(id_kover) %>% 
-  mutate(plasticity = totalbr_mean[nitrate == "HN"] - totalbr_mean[nitrate == "LN"]) %>% 
-  ggplot(aes(nitrate, totalbr_mean)) + 
-  geom_line(aes(group = id_kover, colour = plasticity), alpha = 0.3, size = 1) +
-  # geom_line(data = filter(magic_sum, id_leyser %in% magic_highlight), colour = "brown", aes(group = id_leyser), 
-  #           alpha = 0.1, size = 1) +
-  coord_cartesian(ylim = c(0, 10)) +
-  scale_colour_viridis_c() +
-  #scale_colour_gradient2(low = "steelblue", mid = "grey48", high = "brown") +
-  #guides(colour = guide_legend(override.aes= list(alpha = 1))) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
+  theme(legend.position = "none") +
   labs(x = "Nitrate", y = "Total Branches")
 
 p1.2 <- magic_plas %>% 
   ggplot(aes(totalbr_rdpi)) + 
   geom_histogram(fill = "black", binwidth = 0.1) +
-  geom_histogram(data = filter(magic_plas, id_leyser %in% magic_highlight), fill = "brown", binwidth = 0.1) +
+  #geom_histogram(data = filter(magic_plas, id_leyser %in% magic_highlight), fill = "brown", binwidth = 0.1) +
   geom_vline(xintercept = 0, colour = "grey", linetype = 2) +
+  geom_rug(sides = "b", aes(colour = totalbr_rdpi), show.legend = FALSE) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
   scale_x_continuous(limits = c(-1.2, 1.2)) +
   labs(x = "Relative Plasticity Index")
 
@@ -130,23 +109,29 @@ p2 <- ggplot(magic_plas, aes(2^boltLog_mean_hn, 2^boltLog_mean_ln)) +
   annotate(geom = "text", x = 10, y = 108, 
            label = corLabel(magic_plas$boltLog_mean_hn, magic_plas$boltLog_mean_ln, TRUE),
            hjust = 0, vjust = 1, size = 2.5) +
-  coord_cartesian(xlim = c(10, 110), ylim = c(10, 110)) +
   geom_abline(linetype = "dashed") +
   labs(x = "Days to Flowering (HN)", y = "Days to Flowering (LN)") +
   scale_x_continuous(breaks = seq(10, 110, 20), trans = "log2") +
-  scale_y_continuous(breaks = seq(10, 110, 20), trans = "log2")
+  scale_y_continuous(breaks = seq(10, 110, 20), trans = "log2") +
+  coord_fixed(xlim = c(10, 110), ylim = c(10, 110))
 
-p2.1 <- magic_sum %>% 
-  ggplot(aes(nitrate, 2^boltLog_mean)) + 
-  geom_line(aes(group = id_leyser), alpha = 0.1, size = 1) +
+p2.1 <- magic_plas %>% 
+  select(id_leyser, bolt_rdpi) %>% 
+  full_join(magic_sum, by = "id_leyser") %>% 
+  ggplot(aes(nitrate, 2^boltLog_mean)) +
+  geom_line(aes(group = id_leyser, colour = bolt_rdpi), 
+            alpha = 0.3, size = 1, show.legend = FALSE) +
   scale_y_continuous(breaks = seq(10, 110, 20), trans = "log2") +
   coord_cartesian(ylim = c(10, 110)) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
   labs(x = "Nitrate", y = "Days to Flowering")
 
 p2.2 <- magic_plas %>% 
   ggplot(aes(bolt_rdpi)) + 
   geom_histogram(fill = "black", binwidth = 0.1) +
   geom_vline(xintercept = 0, colour = "grey", linetype = 2) +
+  geom_rug(sides = "b", aes(colour = bolt_rdpi), show.legend = FALSE) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
   scale_x_continuous(limits = c(-1.2, 1.2)) +
   labs(x = "Relative Plasticity Index")
 
@@ -159,25 +144,29 @@ p3 <- ggplot(acc_plas, aes(totalbr_mean_hn, totalbr_mean_ln)) +
   annotate(geom = "text", x = 0, y = 10, 
            label = corLabel(acc_plas$totalbr_mean_hn, acc_plas$totalbr_mean_ln, TRUE),
            hjust = 0, vjust = 1, size = 2.5) +
-  coord_cartesian(xlim = c(0, 10), ylim = c(0, 10)) +
   geom_abline(linetype = "dashed") +
   labs(x = "Total Branches (HN)", y = "Total Branches (LN)") +
   scale_x_continuous(breaks = seq(0, 10, 2)) +
-  scale_y_continuous(breaks = seq(0, 10, 2))
+  scale_y_continuous(breaks = seq(0, 10, 2)) +
+  coord_fixed(xlim = c(0, 10), ylim = c(0, 10))
 
-p3.1 <- acc_sum %>% 
-  ggplot(aes(nitrate, totalbr_mean)) + 
-  geom_line(aes(group = id_leyser), alpha = 0.1, size = 1) +
-  geom_line(data = filter(acc_sum, id_leyser %in% acc_highlight), colour = "brown", aes(group = id_leyser), 
-            alpha = 0.1, size = 1) +
+p3.1 <- acc_plas %>% 
+  select(id_leyser, totalbr_rdpi) %>% 
+  full_join(acc_sum, by = "id_leyser") %>% 
+  ggplot(aes(nitrate, totalbr_mean)) +
+  geom_line(aes(group = id_leyser, colour = totalbr_rdpi), alpha = 0.3, size = 1) +
   coord_cartesian(ylim = c(0, 10)) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
+  theme(legend.position = "none") +
   labs(x = "Nitrate", y = "Total Branches")
 
 p3.2 <- acc_plas %>% 
   ggplot(aes(totalbr_rdpi)) + 
   geom_histogram(fill = "black", binwidth = 0.1) +
-  geom_histogram(data = filter(acc_plas, id_leyser %in% acc_highlight), fill = "brown", binwidth = 0.1) +
+  #geom_histogram(data = filter(magic_plas, id_leyser %in% magic_highlight), fill = "brown", binwidth = 0.1) +
   geom_vline(xintercept = 0, colour = "grey", linetype = 2) +
+  geom_rug(sides = "b", aes(colour = totalbr_rdpi), show.legend = FALSE) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
   scale_x_continuous(limits = c(-1.2, 1.2)) +
   labs(x = "Relative Plasticity Index")
 
@@ -188,25 +177,33 @@ p4 <- ggplot(acc_plas, aes(2^boltLog_mean_hn, 2^boltLog_mean_ln)) +
   annotate(geom = "text", x = 10, y = 38, 
            label = corLabel(acc_plas$boltLog_mean_hn, acc_plas$boltLog_mean_ln, TRUE),
            hjust = 0, vjust = 1, size = 2.5) +
-  coord_cartesian(xlim = c(10, 40), ylim = c(10, 40)) +
   geom_abline(linetype = "dashed") +
   labs(x = "Days to Flowering (HN)", y = "Days to Flowering (LN)") +
   scale_x_continuous(breaks = seq(10, 40, 5), trans = "log2") +
-  scale_y_continuous(breaks = seq(10, 40, 5), trans = "log2")
+  scale_y_continuous(breaks = seq(10, 40, 5), trans = "log2") +
+  coord_fixed(xlim = c(10, 40), ylim = c(10, 40))
 
-p4.1 <- acc_sum %>% 
-  ggplot(aes(nitrate, 2^boltLog_mean)) + 
-  geom_line(aes(group = id_leyser), alpha = 0.1, size = 1) +
+p4.1 <- acc_plas %>% 
+  select(id_leyser, bolt_rdpi) %>% 
+  full_join(acc_sum, by = "id_leyser") %>% 
+  ggplot(aes(nitrate, 2^boltLog_mean)) +
+  geom_line(aes(group = id_leyser, colour = bolt_rdpi), 
+            alpha = 0.3, size = 1, show.legend = FALSE) +
   scale_y_continuous(breaks = seq(10, 40, 5), trans = "log2") +
   coord_cartesian(ylim = c(10, 40)) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
   labs(x = "Nitrate", y = "Days to Flowering")
+
 
 p4.2 <- acc_plas %>% 
   ggplot(aes(bolt_rdpi)) + 
   geom_histogram(fill = "black", binwidth = 0.1) +
   geom_vline(xintercept = 0, colour = "grey", linetype = 2) +
+  geom_rug(sides = "b", aes(colour = bolt_rdpi), show.legend = FALSE) +
+  scale_colour_viridis_c(limits = c(-1, 1)) +
   scale_x_continuous(limits = c(-1.2, 1.2)) +
   labs(x = "Relative Plasticity Index")
+
 
 # Put the plots together and save to pdf
 #pdf("./figures/figure2.pdf", width = 7.5, height = 8.75)
