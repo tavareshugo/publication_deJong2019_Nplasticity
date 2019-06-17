@@ -1,9 +1,9 @@
 .Rhistory
-scripts/R/figures
-scripts/R/temp_data
+.Rproj.user
+appolo
 data
 data_processed
-.Rproj.user
 figures/
+scripts/R/figures
 *.stdout
 
