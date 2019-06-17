@@ -154,4 +154,4 @@ map2(full_lmm, reduced_lmm, tidyLmm) %>%
   bind_rows(.id = "trait") %>% 
   mutate(estimate = prettyNum(estimate)) %>% 
   spread(trait, estimate) %>% 
-  write_csv("./data_processed/lmm_traits/tidy_lmm_output.csv")
+  write_csv("./figures/TableS2_tidy_lmm.csv")
