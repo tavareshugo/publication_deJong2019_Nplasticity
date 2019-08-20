@@ -12,7 +12,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_classic() + 
-            theme(text = element_text(size = 8)))
+            theme(text = element_text(size = 10)))
 
 
 #### Read data ####
@@ -47,8 +47,8 @@ p1 <- all_trait_vars %>%
   #scale_fill_manual(values = c("white", "gray48", "grey", "black")) +
   #geom_text(size = 3, position = position_stack(vjust = 0.5)) +
   geom_text(data = corr_labels, 
-            aes(x = trait, y = 103, label = sprintf("%0.2f", cor_ln_hn)),
-            inherit.aes = FALSE, size = 2) +
+            aes(x = trait, y = 104, label = sprintf("%0.2f", cor_ln_hn)),
+            inherit.aes = FALSE, size = 3) +
   scale_x_discrete(labels = c("flowering", "height", "branches", 
                               "branches\n(sen)", "siliques\n(sen)")) + 
   labs(y = "% variance", tag = "A") +
@@ -79,6 +79,7 @@ p2 <- all_trait_vars %>%
         axis.title.x = element_blank(), legend.position = "none")
 
 # Arrange (and save) figure
-#pdf("./figures/figure1.pdf", width = 4.5, height = 5)
+pdf("./figures/figure1.pdf", width = 4.5, height = 5)
+#tiff("./figures/figure1.tiff", width = 4.5, height = 5, units = "in", compression = "lzw", res = 600)
 p1 + p2 + plot_layout(ncol = 1)
-#dev.off()
+dev.off()

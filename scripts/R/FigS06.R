@@ -11,7 +11,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), text = element_text(size = 8)))
+            theme(panel.grid = element_blank(), text = element_text(size = 10)))
 
 
 #### read data ####

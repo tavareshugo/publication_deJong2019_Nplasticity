@@ -11,7 +11,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), text = element_text(size = 8)))
+            theme(panel.grid = element_blank(), text = element_text(size = 10)))
 
 
 #### Read data ####
@@ -111,7 +111,7 @@ p1 <- dcp %>%
         legend.position = c(0, 1), legend.justification = c(-0.1, 1.1),
         legend.background = element_rect(color = "black", size = 0.5))
 
-pdf("./figures/figure6.pdf", width = 7, height = 2.5)
+pdf("./figures/figure5.pdf", width = 7, height = 2.5)
 p1
 dev.off()
 

@@ -11,7 +11,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), text = element_text(size = 8)))
+            theme(panel.grid = element_blank(), text = element_text(size = 10)))
 
 
 #### read data ####
@@ -64,9 +64,9 @@ p2 <- gwas %>%
   labs(x = "Position (Mb)", tag = "B")
 
 # Save figure
-#pdf("./figures/figure8.pdf", width = 7, height = 6)
+pdf("./figures/figure8.pdf", width = 7, height = 6)
 p1 + p2 + plot_layout(ncol = 1)
-#dev.off()
+dev.off()
 
 
 # Using imputed SNPs (but showing the 250k threshold)

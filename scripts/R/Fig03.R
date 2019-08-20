@@ -12,7 +12,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_classic() + 
-            theme(text = element_text(size = 8)))
+            theme(text = element_text(size = 10)))
 
 # Custom function 
 source("./scripts/R/functions/corrLabel.R")
@@ -50,13 +50,14 @@ magic_extremes <- left_join(magic_extremes, magic_sum, by = "id_kover")
 p1 <- ggplot(magic_plas, aes(x = totalbr_mean_D)) +
   geom_point(aes(y = totalbr_mean_hn, colour = "HN"), size = 0.8) +
   geom_point(aes(y = totalbr_mean_ln, colour = "LN"), size = 0.8) +
-  annotate(geom = "text", x = 6, y = 4, size = 2.5, hjust = 0,
+  annotate(geom = "text", x = 4.6, y = 3.7, size = 3, hjust = 0,
            label = corLabel(magic_plas$totalbr_mean_D, magic_plas$totalbr_mean_ln)) +
-  annotate(geom = "text", x = 6, y = 6, size = 2.5, hjust = 0,
+  annotate(geom = "text", x = 5, y = 4.7, size = 3, hjust = 0,
            label = corLabel(magic_plas$totalbr_mean_D, magic_plas$totalbr_mean_hn)) +
   scale_colour_manual(values = c("black", "grey69")) +
   labs(y = "Total Branches", x = "Branching Plasticity", colour = "Nitrate", tag = "A") +
-  theme(legend.position = "top")
+  theme(legend.position = "top") +
+  guides(colour = guide_legend(title.position="top", direction = "vertical"))
 
 
 # Boxplot
@@ -69,7 +70,8 @@ p2 <- magic_extremes %>%
   geom_point() +
   scale_colour_viridis_c(name = "Days to Flowering", breaks = seq(12, 28, 3)) +
   theme(legend.position = "top") +
-  labs(x = "Nitrate", y = "Total Branches", tag = "B")
+  labs(x = "Nitrate", y = "Total Branches", tag = "B") +
+  guides(colour = guide_colourbar(title.position="top"))
 
 
 # Correlation with flowering time
@@ -77,9 +79,9 @@ p2 <- magic_extremes %>%
 p3 <- ggplot(magic_plas, aes(bolt_mean_ln, totalbr_mean_D)) +
   geom_point(size = 0.8) +
   geom_vline(xintercept = 25, linetype = "dotted") +
-  annotate(geom = "text", x = 26, y = 8, size = 2.5, hjust = 0, vjust = 1,
+  annotate(geom = "text", x = 26, y = 8, size = 3, hjust = 0, vjust = 1,
            label = corLabel(magic_plas$bolt_mean_ln, magic_plas$totalbr_mean_D)) +
-  annotate(geom = "text", x = 12, y = 8, size = 2.5, hjust = 0, vjust = 1,
+  annotate(geom = "text", x = 12, y = 8, size = 3, hjust = 0, vjust = 1,
            label = with(filter(magic_plas, bolt_mean_ln < 25),
                         corLabel(bolt_mean_ln, totalbr_mean_D))) +
   stat_smooth(se = FALSE, method = "loess") +
@@ -88,8 +90,9 @@ p3 <- ggplot(magic_plas, aes(bolt_mean_ln, totalbr_mean_D)) +
 
 
 # Save plot
-#pdf("./figures/figure3.pdf", width = 5.2, height = 4.5)
+pdf("./figures/figure3.pdf", width = 5.2, height = 4.5)
+#tiff("./figures/figure3.tiff", width = 7, height = 4.5, units = "in", compression = "lzw", res = 600)
 {p1 + labs(tag = "A") +
-    p2 + labs(tag = "B") + plot_layout(widths = c(3/5, 2/5))} /
+    p2 + labs(tag = "B") + plot_layout(widths = c(1, 1))} /
   p3 + labs(tag = "C")
-#dev.off()
+dev.off()

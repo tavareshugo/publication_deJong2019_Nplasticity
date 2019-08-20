@@ -13,7 +13,7 @@ source("./scripts/R/functions/plotLmmDiag.R") # function to plot some diagnostic
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), text = element_text(size = 8)))
+            theme(panel.grid = element_blank(), text = element_text(size = 10)))
 
 
 
@@ -30,9 +30,10 @@ graft <- graft %>%
   # Make nitrate a factor
   mutate(id = paste(shoot_id, root_id, graft_type, sep = "\n"),
          nitrate = factor(nitrate, levels = c("HN", "LN")),
-         type = ifelse(grepl("M11|M345", id), "MAGIC", "accession")) %>% 
+         type = ifelse(grepl("M11|M345", id), "MAGIC", "Accessions")) %>% 
   # Order ID by the shoot type (convenient for consistent plotting)
-  mutate(id = reorder(as.factor(id), as.numeric(as.factor(paste0(shoot_type, graft_type)))))
+  mutate(id = reorder(as.factor(id), as.numeric(as.factor(paste0(shoot_type, graft_type)))),
+         type = factor(type, levels = c("MAGIC", "Accessions")))
 
 
 
@@ -104,7 +105,8 @@ p1 <- graft %>%
   geom_point() +
   geom_errorbar(width = 0) +
   facet_grid( ~ type, scales = "free_x") +
-  scale_colour_manual(values = c("black", "grey")) +
+  scale_linetype_discrete(guide = FALSE) +
+  scale_colour_manual(guide = FALSE, values = c("black", "grey")) +
   theme(panel.grid = element_blank(), axis.text.x = element_text(size = 3)) +
   labs(x = "", y = "Total Branches", colour = "Nitrate")
 
@@ -120,12 +122,13 @@ p2 <- graft %>%
   geom_point() +
   geom_errorbar(width = 0) +
   facet_grid( ~ type, scales = "free_x") +
+  scale_linetype_discrete(guide = FALSE) +
   scale_colour_manual(values = c("black", "grey")) +
   theme(panel.grid = element_blank(), axis.text.x = element_text(size = 3)) +
   labs(x = "", y = "Days to Flowering", colour = "Nitrate") +
   ylim(0, 24)
 
 # Figure further edited in inkscape
-pdf("./figures/figure6.pdf", width = 7.5, height = 3.5)
+pdf("./figures/figure6.pdf", width = 7, height = 3.5)
 p2 + p1 + plot_layout(ncol = 1)
 dev.off()

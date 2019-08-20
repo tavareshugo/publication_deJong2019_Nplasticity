@@ -12,7 +12,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_classic() + 
-            theme(text = element_text(size = 8)))
+            theme(text = element_text(size = 10)))
 
 # Custom function 
 source("./scripts/R/functions/corrLabel.R")
@@ -54,12 +54,12 @@ cor_sil_sen <- data.frame(nitrate = c("HN", "LN"),
 #
 
 # Figure
-#pdf("./figures/figureS1.pdf", width = 5.2, height = 5)
+pdf("./figures/figureS1.pdf", width = 5.2, height = 5)
 acc_sum %>% 
   ggplot(aes(totalbr_sil, totalbr_sen)) +
   geom_point() +
-  geom_text(data = cor_sil_sen, x = 0, y = 7, aes(label = cor), size = 2.5, hjust = 0) +
+  geom_text(data = cor_sil_sen, x = 0, y = 7, aes(label = cor), size = 3, hjust = 0) +
   geom_abline(linetype = "dashed") +
   facet_wrap(~ nitrate) +
   labs(x = "Total Branches (silique)", y = "Total Branches (senescence)")
-#dev.off()
+dev.off()

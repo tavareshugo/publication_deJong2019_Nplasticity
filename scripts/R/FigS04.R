@@ -11,7 +11,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), text = element_text(size = 8)))
+            theme(panel.grid = element_blank(), text = element_text(size = 10)))
 
 
 #### Read data ####
@@ -22,7 +22,7 @@ qtl_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lm_perm.csv") %>%
   filter(level == 0.05)
 
 # Linear mixed model results
-qtl_lmm <- read_csv("./data_processed/qtl_magic/qtl_scans_lmm.csv") %>% 
+qtl_lmm <- read_csv("./data_processed/qtl_magic/qtl2_scans_lmm.csv") %>% 
   select(-LOD_full) %>% 
   gather("test", "LOD", matches("LOD")) %>% 
   mutate(test = str_remove(test, "LOD_"))
@@ -38,7 +38,7 @@ qtl_lmm_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lmm_perm.csv")
 
 #### make plot ####
 
-
+pdf("./figures/figureS4.pdf", width = 7, height = 3)
 qtl_results %>% 
   filter(grepl("height", trait)) %>% 
   ggplot(aes(bp/1e6, LOD)) +
@@ -50,5 +50,5 @@ qtl_results %>%
   theme(panel.grid = element_blank(), legend.position = "none") +
   scale_y_continuous(breaks = seq(0, 20, 4)) +
   scale_x_continuous(breaks = seq(0, 30, 10))
-
+dev.off()
 

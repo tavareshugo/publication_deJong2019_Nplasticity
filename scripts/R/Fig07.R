@@ -11,7 +11,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_bw() + 
-            theme(panel.grid = element_blank(), text = element_text(size = 8)))
+            theme(panel.grid = element_blank(), text = element_text(size = 10)))
 
 
 #### Read data ####
@@ -22,7 +22,7 @@ qtl_thresh <- read_csv("./data_processed/qtl_magic/qtl2_scans_lm_perm.csv") %>%
   filter(level == 0.05)
 
 # Linear mixed model results
-qtl_lmm <- read_csv("./data_processed/qtl_magic/qtl_scans_lmm.csv") %>% 
+qtl_lmm <- read_csv("./data_processed/qtl_magic/qtl2_scans_lmm.csv") %>% 
   select(-LOD_full) %>% 
   gather("test", "LOD", matches("LOD")) %>% 
   mutate(test = str_remove(test, "LOD_"))

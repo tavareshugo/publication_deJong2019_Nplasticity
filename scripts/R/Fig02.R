@@ -12,7 +12,7 @@ library(patchwork)
 
 # Change ggplot2 default aesthetics
 theme_set(theme_classic() + 
-            theme(text = element_text(size = 8)))
+            theme(text = element_text(size = 10)))
 
 # Custom function 
 source("./scripts/R/functions/corrLabel.R")
@@ -75,7 +75,7 @@ p1 <- ggplot(magic_plas, aes(totalbr_mean_hn, totalbr_mean_ln)) +
   geom_point(data = filter(magic_plas, id_leyser %in% magic_highlight), colour = "brown", size = 0.5) +
   annotate(geom = "text", x = 0, y = 10, 
            label = corLabel(magic_plas$totalbr_mean_hn, magic_plas$totalbr_mean_ln, TRUE),
-           hjust = 0, vjust = 1, size = 2.5) +
+           hjust = 0, vjust = 1, size = 3) +
   geom_abline(linetype = "dashed") +
   labs(x = "Total Branches (HN)", y = "Total Branches (LN)") +
   scale_x_continuous(breaks = seq(0, 10, 2)) +
@@ -108,7 +108,7 @@ p2 <- ggplot(magic_plas, aes(2^boltLog_mean_hn, 2^boltLog_mean_ln)) +
   geom_point(size = 1) +
   annotate(geom = "text", x = 10, y = 108, 
            label = corLabel(magic_plas$boltLog_mean_hn, magic_plas$boltLog_mean_ln, TRUE),
-           hjust = 0, vjust = 1, size = 2.5) +
+           hjust = 0, vjust = 1, size = 3) +
   geom_abline(linetype = "dashed") +
   labs(x = "Days to Flowering (HN)", y = "Days to Flowering (LN)") +
   scale_x_continuous(breaks = seq(10, 110, 20), trans = "log2") +
@@ -143,7 +143,7 @@ p3 <- ggplot(acc_plas, aes(totalbr_mean_hn, totalbr_mean_ln)) +
   geom_point(data = filter(acc_plas, id_leyser %in% acc_highlight), colour = "brown", size = 0.5) +
   annotate(geom = "text", x = 0, y = 10, 
            label = corLabel(acc_plas$totalbr_mean_hn, acc_plas$totalbr_mean_ln, TRUE),
-           hjust = 0, vjust = 1, size = 2.5) +
+           hjust = 0, vjust = 1, size = 3) +
   geom_abline(linetype = "dashed") +
   labs(x = "Total Branches (HN)", y = "Total Branches (LN)") +
   scale_x_continuous(breaks = seq(0, 10, 2)) +
@@ -176,7 +176,7 @@ p4 <- ggplot(acc_plas, aes(2^boltLog_mean_hn, 2^boltLog_mean_ln)) +
   geom_point(size = 1) +
   annotate(geom = "text", x = 10, y = 38, 
            label = corLabel(acc_plas$boltLog_mean_hn, acc_plas$boltLog_mean_ln, TRUE),
-           hjust = 0, vjust = 1, size = 2.5) +
+           hjust = 0, vjust = 1, size = 3) +
   geom_abline(linetype = "dashed") +
   labs(x = "Days to Flowering (HN)", y = "Days to Flowering (LN)") +
   scale_x_continuous(breaks = seq(10, 40, 5), trans = "log2") +
@@ -206,11 +206,11 @@ p4.2 <- acc_plas %>%
 
 
 # Put the plots together and save to pdf
-#pdf("./figures/figure2.pdf", width = 7.5, height = 8.75)
+pdf("./figures/figure2.pdf", width = 7.5, height = 8.75)
+#tiff("./figures/figure2.tiff", width = 7.5, height = 8.75, units = "in", compression = "lzw", res = 600)
 p1 + labs(tag = "A") + p1.1 + p1.2 +
   p2 + labs(tag = "B") + p2.1 + p2.2 +
   p3 + labs(tag = "C") + p3.1 + p3.2 +
   p4 + labs(tag = "D") + p4.1 + p4.2 +
   plot_layout(ncol = 3, widths = c(0.4, 0.3, 0.3))
-#dev.off()
-
+dev.off()
