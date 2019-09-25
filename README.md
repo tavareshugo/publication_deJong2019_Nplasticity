@@ -1,6 +1,6 @@
 # Analysis code for _de Jong et al. 2019_
 
-This repository contains code used in the analysis of data from [de Jong et al. 2019](). 
+This repository contains code used in the analysis of data from [de Jong et al. 2019](https://doi.org/10.1371/journal.pgen.1008366). 
 
 All of the code (and data) is deposited as a static snapshot in the Cambridge Apollo repository 
 (https://doi.org/10.17863/CAM.20379), corresponding to release 0.1 of the 
@@ -14,7 +14,7 @@ bugs (see "NEWS" section at the bottom).
 
 1. Clone the repository (or [download as a zip file](https://github.com/tavareshugo/publication_deJong2019_Nplasticity/archive/master.zip)
 and extract the files) - you should then have a project directory called _"publication_deJong2019_Nplasticity"_
-2. Download and extract the zip files with the [raw data]() and the [processed data]() 
+2. Download and extract the zip files with the [raw data](https://www.repository.cam.ac.uk/bitstream/handle/1810/296168/data.zip?sequence=6&isAllowed=y) and the [processed data](https://www.repository.cam.ac.uk/bitstream/handle/1810/296168/data_processed.zip?sequence=7&isAllowed=y) 
 from the Appolo repository. Place them inside the previous project directory. 
 
 In the end you should have this directory structure: 
